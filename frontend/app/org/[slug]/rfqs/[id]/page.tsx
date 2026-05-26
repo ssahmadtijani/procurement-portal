@@ -39,10 +39,10 @@ export default function RFQDetailPage() {
     enabled: isBuyer,
   });
 
-  // Search supplier orgs for invitation
+  // Search supplier orgs for invitation (uses internal authenticated endpoint — no VERIFIED filter)
   const { data: supplierResults } = useQuery({
     queryKey: ['supplier-search', supplierSearch],
-    queryFn: () => api.get(`/marketplace/suppliers?search=${supplierSearch}&limit=10`).then((r) => r.data.data?.suppliers ?? []),
+    queryFn: () => api.get(`/suppliers?search=${encodeURIComponent(supplierSearch)}&limit=10`).then((r) => r.data.data?.suppliers ?? []),
     enabled: supplierSearch.length >= 2,
   });
 
