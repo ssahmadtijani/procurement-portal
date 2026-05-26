@@ -39,10 +39,10 @@ export default function RFQDetailPage() {
     enabled: isBuyer,
   });
 
-  // Search supplier orgs for invitation (uses internal authenticated endpoint — no VERIFIED filter)
+  // Search supplier orgs by org name — queries Organisation directly so unprofile'd orgs still appear
   const { data: supplierResults } = useQuery({
     queryKey: ['supplier-search', supplierSearch],
-    queryFn: () => api.get(`/suppliers?search=${encodeURIComponent(supplierSearch)}&limit=10`).then((r) => r.data.data?.suppliers ?? []),
+    queryFn: () => api.get(`/suppliers/orgs?q=${encodeURIComponent(supplierSearch)}`).then((r) => r.data.data?.orgs ?? []),
     enabled: supplierSearch.length >= 2,
   });
 
@@ -139,16 +139,16 @@ export default function RFQDetailPage() {
             />
             {supplierResults && supplierResults.length > 0 && (
               <div className="border rounded-md divide-y overflow-hidden">
-                {supplierResults.map((s: { id: string; companyName: string; organization: { id: string; name: string } }) => {
-                  const alreadyInvited = invitedOrgs.some((inv) => inv.supplierOrgId === s.organization.id);
+                {supplierResults.map((s: { id: string; name: string; slug: string }) => {
+                  const alreadyInvited = invitedOrgs.some((inv) => inv.supplierOrgId === s.id);
                   return (
                     <div key={s.id} className="flex items-center justify-between px-3 py-2 text-sm bg-background hover:bg-muted/50">
-                      <span>{s.companyName}</span>
+                      <span>{s.name}</span>
                       <Button
                         size="sm"
                         variant={alreadyInvited ? 'outline' : 'default'}
                         disabled={alreadyInvited || inviteMutation.isPending}
-                        onClick={() => inviteMutation.mutate(s.organization.id)}
+                        onClick={() => inviteMutation.mutate(s.id)}
                       >
                         {alreadyInvited ? 'Invited' : 'Invite'}
                       </Button>

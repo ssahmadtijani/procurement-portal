@@ -8,6 +8,7 @@ import {
   getSupplierById,
   verifySupplier,
   getVerifiedSuppliers,
+  searchSupplierOrgs,
 } from '../controllers/supplier.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/rbac.middleware';
@@ -34,6 +35,8 @@ router.put('/profile', authorize('SUPPLIER', 'ORG_ADMIN'), updateSupplierProfile
 // Admin: manage all suppliers
 router.get('/', authorize('ORG_ADMIN', 'PROCUREMENT_OFFICER', 'CORPORATE_OFFICE', 'PLATFORM_ADMIN'), listSuppliers);
 router.get('/verified', authorize('ORG_ADMIN', 'PROCUREMENT_OFFICER', 'CORPORATE_OFFICE', 'PLATFORM_ADMIN'), getVerifiedSuppliers);
+// Search supplier orgs by name (for invitation picker — returns orgs even without a profile)
+router.get('/orgs', authorize('ORG_ADMIN', 'PROCUREMENT_OFFICER', 'CORPORATE_OFFICE', 'PLATFORM_ADMIN'), searchSupplierOrgs);
 router.get('/:id', authorize('ORG_ADMIN', 'PROCUREMENT_OFFICER', 'CORPORATE_OFFICE', 'PLATFORM_ADMIN'), getSupplierById);
 router.post(
   '/:id/verify',

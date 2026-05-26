@@ -193,3 +193,26 @@ export const getVerifiedSuppliers = async (_req: AuthRequest, res: Response): Pr
   });
   sendSuccess(res, suppliers);
 };
+
+// Search supplier organisations by name — used for RFQ invitation search.
+// Queries Organisation directly so orgs without a completed profile still appear.
+export const searchSupplierOrgs = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { q } = req.query as { q?: string };
+  const orgs = await prisma.organization.findMany({
+    where: {
+      type: 'SUPPLIER_COMPANY',
+      ...(q && q.length >= 2
+        ? {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { supplierProfile: { companyName: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    },
+    select: { id: true, name: true, slug: true },
+    take: 15,
+    orderBy: { name: 'asc' },
+  });
+  sendSuccess(res, { orgs });
+};

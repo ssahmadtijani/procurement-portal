@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 const schema = z.object({
   companyName: z.string().min(2),
+  regNumber: z.string().min(1),
   category: z.string().min(2),
   description: z.string().optional(),
   country: z.string().optional(),
@@ -46,12 +47,14 @@ export default function SupplierProfilePage() {
   });
 
   useEffect(() => {
-    if (profile) reset(profile);
+    if (profile) reset({ ...profile, category: profile.categories?.[0] ?? '' });
   }, [profile, reset]);
 
   const saveMutation = useMutation({
-    mutationFn: (data: ProfileForm) =>
-      profile ? api.put('/suppliers/profile', data) : api.post('/suppliers/profile', data),
+    mutationFn: (data: ProfileForm) => {
+      const payload = { ...data, categories: [data.category] };
+      return profile ? api.put('/suppliers/profile', payload) : api.post('/suppliers/profile', payload);
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplier-profile-my'] }); toast({ title: 'Profile saved' }); },
     onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
   });
@@ -74,6 +77,12 @@ export default function SupplierProfilePage() {
           <div className="space-y-1">
             <Label>Company Name</Label>
             <Input {...register('companyName')} />
+            {errors.companyName && <p className="text-xs text-destructive">{errors.companyName.message}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label>Registration Number</Label>
+            <Input {...register('regNumber')} placeholder="RC123456" />
+            {errors.regNumber && <p className="text-xs text-destructive">{errors.regNumber.message}</p>}
           </div>
           <div className="space-y-1">
             <Label>Category / Industry</Label>
