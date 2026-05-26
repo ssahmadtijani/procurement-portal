@@ -294,7 +294,7 @@ model RFQ {
   category          String?
   deadline          DateTime
   budget            Float?
-  currency          String        @default("USD")
+  currency          String        @default("NGN")
   status            RFQStatus     @default(DRAFT)
   visibility        RFQVisibility @default(PUBLIC)
   organizationId    String
@@ -359,7 +359,7 @@ model Bid {
   supplierOrgId   String
   supplierOrg     Organization    @relation(fields: [supplierOrgId], references: [id])
   totalAmount     Float
-  currency        String          @default("USD")
+  currency        String          @default("NGN")
   notes           String?
   validUntil      DateTime?
   status          BidStatus       @default(SUBMITTED)
@@ -409,7 +409,7 @@ model PurchaseOrder {
   supplierOrgId     String
   supplierOrg       Organization    @relation("SupplierOrg", fields: [supplierOrgId], references: [id])
   totalAmount       Float
-  currency          String          @default("USD")
+  currency          String          @default("NGN")
   deliveryAddress   String?
   deliveryDate      DateTime?
   terms             String?
@@ -454,7 +454,7 @@ model Invoice {
   supplier      SupplierProfile @relation(fields: [supplierId], references: [id])
   buyerOrgId    String
   amount        Float
-  currency      String          @default("USD")
+  currency      String          @default("NGN")
   dueDate       DateTime?
   notes         String?
   status        InvoiceStatus   @default(PENDING)
@@ -475,7 +475,7 @@ model Payment {
   invoiceId       String
   invoice         Invoice       @relation(fields: [invoiceId], references: [id])
   amount          Float
-  currency        String        @default("USD")
+  currency        String        @default("NGN")
   paymentDate     DateTime
   paymentMethod   String
   referenceNumber String?

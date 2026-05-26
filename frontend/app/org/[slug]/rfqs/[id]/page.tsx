@@ -69,7 +69,7 @@ export default function RFQDetailPage() {
   });
 
   const bidMutation = useMutation({
-    mutationFn: () => api.post('/bids', { rfqId: id, totalAmount: parseFloat(bidAmount), notes: bidNotes }),
+    mutationFn: () => api.post('/bids', { rfqId: id, totalAmount: parseFloat(bidAmount), currency: rfq?.currency ?? 'NGN', notes: bidNotes }),
     onSuccess: () => { toast({ title: 'Bid submitted' }); setBidAmount(''); setBidNotes(''); router.push(`/org/${slug}/bids`); },
     onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
   });

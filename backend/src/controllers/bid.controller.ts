@@ -33,7 +33,7 @@ export const submitBid = async (req: AuthRequest, res: Response): Promise<void> 
   if (!totalAmount || totalAmount <= 0) {
     sendError(res, 'Bid amount is required', 422); return;
   }
-  const currency: string = req.body.currency ?? 'USD';
+  const currency: string = req.body.currency ?? 'NGN';
 
   const rfq = await prisma.rFQ.findUnique({
     where: { id: rfqId },
