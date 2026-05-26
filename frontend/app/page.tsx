@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { ROLE_DASHBOARD } from '@/lib/utils';
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -11,10 +10,14 @@ export default function Home() {
 
   useEffect(() => {
     if (!loading) {
-      if (user) {
-        router.replace(ROLE_DASHBOARD[user.role] ?? '/dashboard/admin');
-      } else {
+      if (!user) {
         router.replace('/login');
+      } else if (user.role === 'PLATFORM_ADMIN') {
+        router.replace('/platform/dashboard');
+      } else if (user.organization?.slug) {
+        router.replace(`/org/${user.organization.slug}/dashboard`);
+      } else {
+        router.replace('/onboarding');
       }
     }
   }, [user, loading, router]);

@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import DashboardSidebar from '@/components/layout/sidebar';
-import DashboardHeader from '@/components/layout/header';
+import { DashboardSidebar } from '@/components/layout/sidebar';
+import { DashboardHeader } from '@/components/layout/header';
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
