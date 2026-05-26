@@ -1,0 +1,414 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  CORPORATE_OFFICE
+  SUPPLIER
+  PROCUREMENT_OFFICER
+  FINANCE
+}
+
+enum SupplierStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum RFQStatus {
+  DRAFT
+  OPEN
+  EVALUATION
+  AWARDED
+  CLOSED
+  CANCELLED
+}
+
+enum BidStatus {
+  SUBMITTED
+  SHORTLISTED
+  AWARDED
+  REJECTED
+}
+
+enum POStatus {
+  DRAFT
+  SENT
+  ACKNOWLEDGED
+  COMPLETED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+// ─────────────────────────────────────────────
+// User
+// ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  phone        String?
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  supplierProfile  SupplierProfile?
+  corporateProfile CorporateOffice?
+  rfqs             RFQ[]
+  notifications    Notification[]
+  documents        Document[]
+  ratings          SupplierRating[] @relation("RatingGiver")
+  refreshTokens    RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────────────────────────
+// Supplier
+// ─────────────────────────────────────────────
+
+model SupplierProfile {
+  id          String         @id @default(uuid())
+  userId      String         @unique
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName String
+  regNumber   String         @unique
+  taxId       String?
+  address     String?
+  city        String?
+  country     String?
+  website     String?
+  categories  String[]       // e.g. ["IT", "Office Supplies"]
+  bankName    String?
+  bankAccount String?
+  bankBranch  String?
+  status      SupplierStatus @default(PENDING)
+  rejectionNote String?
+  verifiedAt  DateTime?
+  verifiedBy  String?        // admin userId
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  bids             Bid[]
+  purchaseOrders   PurchaseOrder[]
+  invoices         Invoice[]
+  ratings          SupplierRating[] @relation("RatedSupplier")
+  documents        Document[]
+
+  @@map("supplier_profiles")
+}
+
+// ─────────────────────────────────────────────
+// Corporate Office
+// ─────────────────────────────────────────────
+
+model CorporateOffice {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  officeName String
+  location   String?
+  department String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  rfqs           RFQ[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("corporate_offices")
+}
+
+// ─────────────────────────────────────────────
+// RFQ
+// ─────────────────────────────────────────────
+
+model RFQ {
+  id               String    @id @default(uuid())
+  title            String
+  description      String?
+  category         String?
+  deadline         DateTime
+  status           RFQStatus @default(DRAFT)
+  createdById      String
+  createdBy        User      @relation(fields: [createdById], references: [id])
+  corporateOfficeId String?
+  corporateOffice  CorporateOffice? @relation(fields: [corporateOfficeId], references: [id])
+  publishedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  items    RFQItem[]
+  bids     Bid[]
+  documents Document[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("rfqs")
+}
+
+model RFQItem {
+  id             String  @id @default(uuid())
+  rfqId          String
+  rfq            RFQ     @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  itemName       String
+  quantity       Float
+  unit           String?
+  specifications String?
+  estimatedPrice Float?
+
+  bidItems BidItem[]
+
+  @@map("rfq_items")
+}
+
+// ─────────────────────────────────────────────
+// Bid
+// ─────────────────────────────────────────────
+
+model Bid {
+  id          String    @id @default(uuid())
+  rfqId       String
+  rfq         RFQ       @relation(fields: [rfqId], references: [id])
+  supplierId  String
+  supplier    SupplierProfile @relation(fields: [supplierId], references: [id])
+  totalAmount Float
+  currency    String    @default("USD")
+  notes       String?
+  validUntil  DateTime?
+  status      BidStatus @default(SUBMITTED)
+  score       Float?    // evaluation score
+  evaluationNotes String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  items          BidItem[]
+  purchaseOrders PurchaseOrder[]
+  documents      Document[]
+
+  @@unique([rfqId, supplierId])
+  @@map("bids")
+}
+
+model BidItem {
+  id         String   @id @default(uuid())
+  bidId      String
+  bid        Bid      @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  rfqItemId  String
+  rfqItem    RFQItem  @relation(fields: [rfqItemId], references: [id])
+  unitPrice  Float
+  totalPrice Float
+  notes      String?
+
+  @@map("bid_items")
+}
+
+// ─────────────────────────────────────────────
+// Purchase Order
+// ─────────────────────────────────────────────
+
+model PurchaseOrder {
+  id                String   @id @default(uuid())
+  poNumber          String   @unique
+  rfqId             String?
+  rfq               RFQ?     @relation(fields: [rfqId], references: [id])
+  bidId             String?
+  bid               Bid?     @relation(fields: [bidId], references: [id])
+  supplierId        String
+  supplier          SupplierProfile @relation(fields: [supplierId], references: [id])
+  corporateOfficeId String?
+  corporateOffice   CorporateOffice? @relation(fields: [corporateOfficeId], references: [id])
+  totalAmount       Float
+  currency          String   @default("USD")
+  deliveryAddress   String?
+  deliveryDate      DateTime?
+  terms             String?
+  status            POStatus @default(DRAFT)
+  sentAt            DateTime?
+  acknowledgedAt    DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  items     POItem[]
+  invoices  Invoice[]
+  ratings   SupplierRating[]
+  documents Document[]
+
+  @@map("purchase_orders")
+}
+
+model POItem {
+  id          String        @id @default(uuid())
+  poId        String
+  po          PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  itemName    String
+  quantity    Float
+  unit        String?
+  unitPrice   Float
+  totalPrice  Float
+
+  @@map("po_items")
+}
+
+// ─────────────────────────────────────────────
+// Invoice & Payment
+// ─────────────────────────────────────────────
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique
+  poId          String
+  po            PurchaseOrder @relation(fields: [poId], references: [id])
+  supplierId    String
+  supplier      SupplierProfile @relation(fields: [supplierId], references: [id])
+  amount        Float
+  currency      String        @default("USD")
+  dueDate       DateTime?
+  notes         String?
+  status        InvoiceStatus @default(PENDING)
+  approvedBy    String?
+  approvedAt    DateTime?
+  rejectionNote String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  payments  Payment[]
+  documents Document[]
+
+  @@map("invoices")
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  invoiceId       String
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id])
+  amount          Float
+  currency        String        @default("USD")
+  paymentDate     DateTime
+  paymentMethod   String        // "BANK_TRANSFER", "CHECK", "ONLINE"
+  referenceNumber String?
+  notes           String?
+  status          PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────
+// Documents
+// ─────────────────────────────────────────────
+
+model Document {
+  id           String   @id @default(uuid())
+  entityType   String   // "SUPPLIER", "RFQ", "BID", "PO", "INVOICE"
+  entityId     String
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  fileName     String
+  originalName String
+  filePath     String
+  fileType     String
+  fileSize     Int
+  createdAt    DateTime @default(now())
+
+  // Optional FK relations for cascade deletes
+  supplierId String?
+  supplier   SupplierProfile? @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  rfqId      String?
+  rfq        RFQ?             @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  bidId      String?
+  bid        Bid?             @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  poId       String?
+  po         PurchaseOrder?   @relation(fields: [poId], references: [id], onDelete: Cascade)
+  invoiceId  String?
+  invoice    Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+// ─────────────────────────────────────────────
+// Supplier Rating
+// ─────────────────────────────────────────────
+
+model SupplierRating {
+  id         String        @id @default(uuid())
+  supplierId String
+  supplier   SupplierProfile @relation("RatedSupplier", fields: [supplierId], references: [id])
+  poId       String
+  po         PurchaseOrder @relation(fields: [poId], references: [id])
+  ratedById  String
+  ratedBy    User          @relation("RatingGiver", fields: [ratedById], references: [id])
+  score      Int           // 1–5
+  comments   String?
+  createdAt  DateTime      @default(now())
+
+  @@unique([poId, ratedById])
+  @@map("supplier_ratings")
+}
+
+// ─────────────────────────────────────────────
+// Notifications
+// ─────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  link      String?          // optional deep-link path
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@map("notifications")
+}
