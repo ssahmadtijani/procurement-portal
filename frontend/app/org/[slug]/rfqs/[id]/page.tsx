@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useState } from 'react';
+import { X } from 'lucide-react';
 
 export default function RFQDetailPage() {
   const params = useParams();
@@ -21,9 +22,11 @@ export default function RFQDetailPage() {
   const router = useRouter();
   const [bidAmount, setBidAmount] = useState('');
   const [bidNotes, setBidNotes] = useState('');
+  const [supplierSearch, setSupplierSearch] = useState('');
 
   const isBuyer = user?.organization?.type === 'BUYER';
   const isSupplier = user?.organization?.type === 'SUPPLIER_COMPANY';
+  const canManage = isBuyer && (user?.role === 'ORG_ADMIN' || user?.role === 'CORPORATE_OFFICE' || user?.role === 'PROCUREMENT_OFFICER');
 
   const { data: rfq, isLoading } = useQuery({
     queryKey: ['rfq', id],
@@ -34,6 +37,13 @@ export default function RFQDetailPage() {
     queryKey: ['rfq-bids', id],
     queryFn: () => api.get(`/bids/rfq/${id}`).then((r) => r.data.data),
     enabled: isBuyer,
+  });
+
+  // Search supplier orgs for invitation
+  const { data: supplierResults } = useQuery({
+    queryKey: ['supplier-search', supplierSearch],
+    queryFn: () => api.get(`/marketplace/suppliers?search=${supplierSearch}&limit=10`).then((r) => r.data.data?.suppliers ?? []),
+    enabled: supplierSearch.length >= 2,
   });
 
   const closeMutation = useMutation({
@@ -47,6 +57,17 @@ export default function RFQDetailPage() {
     onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
   });
 
+  const inviteMutation = useMutation({
+    mutationFn: (supplierOrgId: string) => api.post(`/rfqs/${id}/invitations`, { supplierOrgId }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['rfq', id] }); setSupplierSearch(''); toast({ title: 'Supplier invited' }); },
+    onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
+  });
+
+  const removeInviteMutation = useMutation({
+    mutationFn: (supplierOrgId: string) => api.delete(`/rfqs/${id}/invitations/${supplierOrgId}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['rfq', id] }); toast({ title: 'Invitation removed' }); },
+  });
+
   const bidMutation = useMutation({
     mutationFn: () => api.post('/bids', { rfqId: id, totalAmount: parseFloat(bidAmount), notes: bidNotes }),
     onSuccess: () => { toast({ title: 'Bid submitted' }); setBidAmount(''); setBidNotes(''); router.push(`/org/${slug}/bids`); },
@@ -55,6 +76,8 @@ export default function RFQDetailPage() {
 
   if (isLoading) return <p className="text-muted-foreground">Loading…</p>;
   if (!rfq) return <p className="text-destructive">RFQ not found</p>;
+
+  const invitedOrgs: Array<{ supplierOrgId: string; supplierOrg: { id: string; name: string; slug: string } }> = rfq.invitations ?? [];
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -79,6 +102,66 @@ export default function RFQDetailPage() {
 
       {isBuyer && rfq.status === 'OPEN' && (
         <Button variant="outline" onClick={() => closeMutation.mutate()}>Close RFQ</Button>
+      )}
+
+      {/* ── Supplier Invitations (INVITED visibility only) ── */}
+      {canManage && rfq.visibility === 'INVITED' && (
+        <div className="bg-card border rounded-lg p-5 space-y-4">
+          <h2 className="text-lg font-semibold">Invited Suppliers</h2>
+
+          {/* Current invitations */}
+          {invitedOrgs.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {invitedOrgs.map((inv) => (
+                <span key={inv.supplierOrgId} className="flex items-center gap-1 bg-muted text-sm px-3 py-1 rounded-full">
+                  {inv.supplierOrg?.name ?? inv.supplierOrgId}
+                  <button
+                    onClick={() => removeInviteMutation.mutate(inv.supplierOrgId)}
+                    className="ml-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No suppliers invited yet. Search below to add them.</p>
+          )}
+
+          {/* Search & invite */}
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={supplierSearch}
+              onChange={(e) => setSupplierSearch(e.target.value)}
+              placeholder="Search supplier company name…"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {supplierResults && supplierResults.length > 0 && (
+              <div className="border rounded-md divide-y overflow-hidden">
+                {supplierResults.map((s: { id: string; companyName: string; organization: { id: string; name: string } }) => {
+                  const alreadyInvited = invitedOrgs.some((inv) => inv.supplierOrgId === s.organization.id);
+                  return (
+                    <div key={s.id} className="flex items-center justify-between px-3 py-2 text-sm bg-background hover:bg-muted/50">
+                      <span>{s.companyName}</span>
+                      <Button
+                        size="sm"
+                        variant={alreadyInvited ? 'outline' : 'default'}
+                        disabled={alreadyInvited || inviteMutation.isPending}
+                        onClick={() => inviteMutation.mutate(s.organization.id)}
+                      >
+                        {alreadyInvited ? 'Invited' : 'Invite'}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {supplierSearch.length >= 2 && supplierResults?.length === 0 && (
+              <p className="text-sm text-muted-foreground px-1">No suppliers found matching "{supplierSearch}".</p>
+            )}
+          </div>
+        </div>
       )}
 
       {isBuyer && bids && (

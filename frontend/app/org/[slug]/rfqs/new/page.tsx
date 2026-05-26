@@ -16,7 +16,7 @@ const schema = z.object({
   description: z.string().min(10),
   deadline: z.string().min(1, 'Required'),
   budget: z.coerce.number().positive().optional(),
-  currency: z.string().default('USD'),
+  currency: z.string().default('NGN'),
   visibility: z.enum(['PUBLIC', 'INVITED']).default('PUBLIC'),
 });
 
@@ -30,7 +30,7 @@ export default function NewRFQPage() {
 
   const { register, handleSubmit, formState: { errors } } = useForm<RFQForm>({
     resolver: zodResolver(schema),
-    defaultValues: { visibility: 'PUBLIC', currency: 'USD' },
+    defaultValues: { visibility: 'PUBLIC', currency: 'NGN' },
   });
 
   const mutation = useMutation({
@@ -75,10 +75,10 @@ export default function NewRFQPage() {
                 {...register('currency')}
                 className="h-10 rounded-md border border-input bg-background px-2 text-sm focus:outline-none"
               >
+                <option>NGN</option>
                 <option>USD</option>
                 <option>EUR</option>
                 <option>GBP</option>
-                <option>NGN</option>
               </select>
               <Input type="number" placeholder="0.00" {...register('budget')} />
             </div>
