@@ -5,6 +5,9 @@ export interface JwtPayload {
   userId: string;
   role: string;
   email: string;
+  organizationId?: string;
+  orgType?: string;
+  orgSlug?: string;
 }
 
 export const generateAccessToken = (payload: JwtPayload): string => {

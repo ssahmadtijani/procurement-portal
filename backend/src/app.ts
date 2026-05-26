@@ -8,6 +8,8 @@ import path from 'path';
 import { env } from './config/env';
 
 import authRoutes from './routes/auth.routes';
+import orgRoutes from './routes/org.routes';
+import subscriptionRoutes from './routes/subscription.routes';
 import supplierRoutes from './routes/supplier.routes';
 import rfqRoutes from './routes/rfq.routes';
 import bidRoutes from './routes/bid.routes';
@@ -19,6 +21,8 @@ import ratingRoutes from './routes/rating.routes';
 import notificationRoutes from './routes/notification.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import userRoutes from './routes/user.routes';
+import marketplaceRoutes from './routes/marketplace.routes';
+import platformRoutes from './routes/platform.routes';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -65,6 +69,8 @@ app.use(
 
 // ── Routes ──
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/orgs', orgRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/rfqs', rfqRoutes);
 app.use('/api/bids', bidRoutes);
@@ -76,6 +82,8 @@ app.use('/api/ratings', ratingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/platform', platformRoutes);
 
 // ── Health check ──
 app.get('/health', (_req, res) => {

@@ -6,41 +6,27 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import { emailService } from '../services/email.service';
 import { notificationService } from '../services/notification.service';
 
-export const registerSupplierProfile = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const registerSupplierProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     sendError(res, 'Validation failed', 422, errors.array());
     return;
   }
 
-  const existing = await prisma.supplierProfile.findUnique({
-    where: { userId: req.user!.userId },
-  });
+  const orgId = req.user!.organizationId;
+  if (!orgId) { sendError(res, 'Organization context required', 400); return; }
+
+  const existing = await prisma.supplierProfile.findUnique({ where: { organizationId: orgId } });
   if (existing) {
-    sendError(res, 'Supplier profile already exists', 409);
+    sendError(res, 'Supplier profile already exists for this organisation', 409);
     return;
   }
 
-  const {
-    companyName,
-    regNumber,
-    taxId,
-    address,
-    city,
-    country,
-    website,
-    categories,
-    bankName,
-    bankAccount,
-    bankBranch,
-  } = req.body;
+  const { companyName, regNumber, taxId, address, city, country, website, categories, bankName, bankAccount, bankBranch } = req.body;
 
   const profile = await prisma.supplierProfile.create({
     data: {
-      userId: req.user!.userId,
+      organizationId: orgId,
       companyName,
       regNumber,
       taxId,
@@ -55,16 +41,19 @@ export const registerSupplierProfile = async (
     },
   });
 
-  // Notify admins
-  const admins = await prisma.user.findMany({ where: { role: 'ADMIN', isActive: true } });
+  // Notify platform admins
+  const platformAdmins = await prisma.user.findMany({
+    where: { role: 'PLATFORM_ADMIN', isActive: true },
+    select: { id: true },
+  });
   await Promise.all(
-    admins.map((admin) =>
+    platformAdmins.map((u) =>
       notificationService.create({
-        userId: admin.id,
+        userId: u.id,
         title: 'New Supplier Registration',
         message: `${companyName} has registered and is awaiting verification.`,
         type: 'INFO',
-        link: `/admin/suppliers/${profile.id}`,
+        link: `/platform/suppliers/${profile.id}`,
       })
     )
   );
@@ -72,66 +61,45 @@ export const registerSupplierProfile = async (
   sendSuccess(res, profile, 'Supplier profile created', 201);
 };
 
-export const getMySupplierProfile = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const getMySupplierProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  const orgId = req.user!.organizationId;
+  if (!orgId) { sendError(res, 'Organization context required', 400); return; }
+
   const profile = await prisma.supplierProfile.findUnique({
-    where: { userId: req.user!.userId },
-    include: { user: { select: { email: true, firstName: true, lastName: true, phone: true } } },
+    where: { organizationId: orgId },
+    include: {
+      organization: { select: { id: true, name: true, slug: true, contactEmail: true } },
+      documents: true,
+    },
   });
-  if (!profile) {
-    sendError(res, 'Profile not found', 404);
-    return;
-  }
+  if (!profile) { sendError(res, 'Profile not found', 404); return; }
   sendSuccess(res, profile);
 };
 
-export const updateSupplierProfile = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const updateSupplierProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     sendError(res, 'Validation failed', 422, errors.array());
     return;
   }
 
-  const profile = await prisma.supplierProfile.findUnique({
-    where: { userId: req.user!.userId },
-  });
-  if (!profile) {
-    sendError(res, 'Profile not found', 404);
-    return;
-  }
+  const orgId = req.user!.organizationId;
+  if (!orgId) { sendError(res, 'Organization context required', 400); return; }
 
-  const {
-    companyName,
-    taxId,
-    address,
-    city,
-    country,
-    website,
-    categories,
-    bankName,
-    bankAccount,
-    bankBranch,
-  } = req.body;
+  const profile = await prisma.supplierProfile.findUnique({ where: { organizationId: orgId } });
+  if (!profile) { sendError(res, 'Profile not found', 404); return; }
 
+  const { companyName, taxId, address, city, country, website, categories, bankName, bankAccount, bankBranch } = req.body;
   const updated = await prisma.supplierProfile.update({
-    where: { userId: req.user!.userId },
+    where: { organizationId: orgId },
     data: { companyName, taxId, address, city, country, website, categories, bankName, bankAccount, bankBranch },
   });
-
   sendSuccess(res, updated);
 };
 
-// ── Admin endpoints ──
+// ── Platform-admin endpoints ────────────────────────────────────────────────
 
-export const listSuppliers = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const listSuppliers = async (req: AuthRequest, res: Response): Promise<void> => {
   const { status, page = '1', limit = '20', search } = req.query as Record<string, string>;
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -148,7 +116,7 @@ export const listSuppliers = async (
     prisma.supplierProfile.findMany({
       where,
       include: {
-        user: { select: { email: true, firstName: true, lastName: true, phone: true } },
+        organization: { select: { id: true, name: true, slug: true, contactEmail: true } },
         _count: { select: { bids: true, purchaseOrders: true } },
       },
       skip,
@@ -161,41 +129,29 @@ export const listSuppliers = async (
   sendSuccess(res, { suppliers, total, page: parseInt(page), limit: parseInt(limit) });
 };
 
-export const getSupplierById = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const getSupplierById = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const supplier = await prisma.supplierProfile.findUnique({
     where: { id },
     include: {
-      user: { select: { email: true, firstName: true, lastName: true, phone: true } },
+      organization: { select: { id: true, name: true, slug: true, contactEmail: true, contactPhone: true } },
       documents: true,
       ratings: true,
     },
   });
-  if (!supplier) {
-    sendError(res, 'Supplier not found', 404);
-    return;
-  }
+  if (!supplier) { sendError(res, 'Supplier not found', 404); return; }
   sendSuccess(res, supplier);
 };
 
-export const verifySupplier = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const verifySupplier = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { action, rejectionNote } = req.body; // action: "VERIFY" | "REJECT"
+  const { action, rejectionNote } = req.body;
 
   const supplier = await prisma.supplierProfile.findUnique({
     where: { id },
-    include: { user: true },
+    include: { organization: { include: { users: { where: { isActive: true }, select: { id: true, email: true, firstName: true } } } } },
   });
-  if (!supplier) {
-    sendError(res, 'Supplier not found', 404);
-    return;
-  }
+  if (!supplier) { sendError(res, 'Supplier not found', 404); return; }
 
   const status = action === 'VERIFY' ? 'VERIFIED' : 'REJECTED';
   const updated = await prisma.supplierProfile.update({
@@ -208,34 +164,31 @@ export const verifySupplier = async (
     },
   });
 
-  await notificationService.create({
-    userId: supplier.userId,
-    title: status === 'VERIFIED' ? 'Profile Verified' : 'Profile Rejected',
-    message:
-      status === 'VERIFIED'
-        ? 'Your supplier profile has been verified. You can now bid on RFQs.'
-        : `Your supplier profile was rejected. Reason: ${rejectionNote ?? 'N/A'}`,
-    type: status === 'VERIFIED' ? 'SUCCESS' : 'ERROR',
-    link: '/supplier/profile',
-  });
-
-  await emailService.sendSupplierVerificationEmail(
-    supplier.user.email,
-    supplier.user.firstName,
-    status,
-    rejectionNote
+  // Notify all active users in the supplier org
+  await Promise.all(
+    supplier.organization.users.map(async (u) => {
+      await notificationService.create({
+        userId: u.id,
+        organizationId: supplier.organizationId,
+        title: status === 'VERIFIED' ? 'Profile Verified' : 'Profile Rejected',
+        message:
+          status === 'VERIFIED'
+            ? 'Your supplier profile has been verified. You can now bid on RFQs.'
+            : `Your supplier profile was rejected. Reason: ${rejectionNote ?? 'N/A'}`,
+        type: status === 'VERIFIED' ? 'SUCCESS' : 'ERROR',
+        link: `/org/${supplier.organization.slug}/supplier/profile`,
+      });
+      await emailService.sendSupplierVerificationEmail(u.email, u.firstName, status, rejectionNote);
+    })
   );
 
   sendSuccess(res, updated);
 };
 
-export const getVerifiedSuppliers = async (
-  _req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const getVerifiedSuppliers = async (_req: AuthRequest, res: Response): Promise<void> => {
   const suppliers = await prisma.supplierProfile.findMany({
     where: { status: 'VERIFIED' },
-    include: { user: { select: { email: true, firstName: true, lastName: true } } },
+    include: { organization: { select: { id: true, name: true, slug: true } } },
     orderBy: { companyName: 'asc' },
   });
   sendSuccess(res, suppliers);

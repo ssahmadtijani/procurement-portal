@@ -19,7 +19,13 @@ router.post(
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
     body('firstName').trim().notEmpty(),
     body('lastName').trim().notEmpty(),
-    body('role').isIn(['ADMIN', 'CORPORATE_OFFICE', 'SUPPLIER', 'PROCUREMENT_OFFICER', 'FINANCE']),
+    body('phone').optional().trim(),
+    // New org flow
+    body('orgName').optional().trim().notEmpty(),
+    body('orgType').optional().isIn(['BUYER', 'SUPPLIER_COMPANY']),
+    body('orgSlug').optional().trim().toLowerCase(),
+    // Join via invite flow
+    body('invitationToken').optional().trim(),
   ],
   register
 );

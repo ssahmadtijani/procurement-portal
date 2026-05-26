@@ -3,6 +3,7 @@ import { NotificationType } from '@prisma/client';
 
 interface CreateNotificationParams {
   userId: string;
+  organizationId?: string;
   title: string;
   message: string;
   type: keyof typeof NotificationType;

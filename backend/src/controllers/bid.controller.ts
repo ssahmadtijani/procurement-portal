@@ -7,6 +7,10 @@ import { notificationService } from '../services/notification.service';
 import { emailService } from '../services/email.service';
 import { poService } from '../services/po.service';
 
+// Helper: get supplier profile for the current user's org
+const getSupplierProfile = (orgId: string) =>
+  prisma.supplierProfile.findUnique({ where: { organizationId: orgId } });
+
 export const submitBid = async (req: AuthRequest, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -14,27 +18,40 @@ export const submitBid = async (req: AuthRequest, res: Response): Promise<void> 
     return;
   }
 
-  const { rfqId, totalAmount, currency, notes, validUntil, items } = req.body;
+  const orgId = req.user!.organizationId;
+  if (!orgId) { sendError(res, 'Organization context required', 400); return; }
 
-  const supplierProfile = await prisma.supplierProfile.findUnique({
-    where: { userId: req.user!.userId },
-  });
+  const supplierProfile = await getSupplierProfile(orgId);
   if (!supplierProfile || supplierProfile.status !== 'VERIFIED') {
-    sendError(res, 'Only verified suppliers can submit bids', 403);
+    sendError(res, 'Only verified supplier organisations can submit bids', 403);
     return;
   }
 
-  const rfq = await prisma.rFQ.findUnique({ where: { id: rfqId } });
+  const { rfqId, totalAmount, currency, notes, validUntil, items } = req.body;
+
+  const rfq = await prisma.rFQ.findUnique({
+    where: { id: rfqId },
+    include: { invitations: { select: { supplierOrgId: true } } },
+  });
   if (!rfq || rfq.status !== 'OPEN') {
     sendError(res, 'RFQ is not open for bidding', 400);
     return;
+  }
+
+  // Check visibility access
+  if (rfq.visibility === 'INVITED') {
+    const isInvited = rfq.invitations.some((inv) => inv.supplierOrgId === orgId);
+    if (!isInvited) {
+      sendError(res, 'Your organisation has not been invited to bid on this RFQ', 403);
+      return;
+    }
   }
 
   const existing = await prisma.bid.findUnique({
     where: { rfqId_supplierId: { rfqId, supplierId: supplierProfile.id } },
   });
   if (existing) {
-    sendError(res, 'You have already submitted a bid for this RFQ', 409);
+    sendError(res, 'Your organisation has already submitted a bid for this RFQ', 409);
     return;
   }
 
@@ -42,6 +59,7 @@ export const submitBid = async (req: AuthRequest, res: Response): Promise<void> 
     data: {
       rfqId,
       supplierId: supplierProfile.id,
+      supplierOrgId: orgId,
       totalAmount,
       currency: currency ?? 'USD',
       notes,
@@ -63,18 +81,19 @@ export const submitBid = async (req: AuthRequest, res: Response): Promise<void> 
     include: { items: true },
   });
 
-  // Notify procurement officers
+  // Notify buyer org's procurement officers
   const officers = await prisma.user.findMany({
-    where: { role: 'PROCUREMENT_OFFICER', isActive: true },
+    where: { role: 'PROCUREMENT_OFFICER', isActive: true, organizationId: rfq.organizationId },
   });
   await Promise.all(
     officers.map((o) =>
       notificationService.create({
         userId: o.id,
+        organizationId: rfq.organizationId,
         title: 'New Bid Submitted',
         message: `${supplierProfile.companyName} submitted a bid for RFQ "${rfq.title}".`,
         type: 'INFO',
-        link: `/procurement/rfq/${rfqId}`,
+        link: `/org/${req.user!.orgSlug}/rfqs/${rfqId}`,
       })
     )
   );
@@ -84,23 +103,20 @@ export const submitBid = async (req: AuthRequest, res: Response): Promise<void> 
 
 export const updateBid = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
+  const orgId = req.user!.organizationId;
+  if (!orgId) { sendError(res, 'Organization context required', 400); return; }
 
-  const supplierProfile = await prisma.supplierProfile.findUnique({
-    where: { userId: req.user!.userId },
-  });
-
+  const supplierProfile = await getSupplierProfile(orgId);
   const bid = await prisma.bid.findUnique({ where: { id }, include: { rfq: true } });
+
   if (!bid || bid.supplierId !== supplierProfile?.id) {
-    sendError(res, 'Bid not found', 404);
-    return;
+    sendError(res, 'Bid not found', 404); return;
   }
   if (bid.status !== 'SUBMITTED') {
-    sendError(res, 'Cannot update a bid that has been processed', 400);
-    return;
+    sendError(res, 'Cannot update a bid that has been processed', 400); return;
   }
   if (bid.rfq.status !== 'OPEN') {
-    sendError(res, 'RFQ is no longer open', 400);
-    return;
+    sendError(res, 'RFQ is no longer open', 400); return;
   }
 
   const { totalAmount, currency, notes, validUntil } = req.body;
@@ -114,17 +130,13 @@ export const updateBid = async (req: AuthRequest, res: Response): Promise<void> 
 
 export const getBidsForRFQ = async (req: AuthRequest, res: Response): Promise<void> => {
   const { rfqId } = req.params;
-  const { role, userId } = req.user!;
+  const { role, organizationId } = req.user!;
 
-  // Suppliers only see their own bid
-  if (role === 'SUPPLIER') {
-    const supplierProfile = await prisma.supplierProfile.findUnique({
-      where: { userId },
-    });
+  // Suppliers only see their own org's bid
+  if (role === 'SUPPLIER' || (role === 'ORG_ADMIN' && req.user!.orgType === 'SUPPLIER_COMPANY')) {
+    const supplierProfile = await getSupplierProfile(organizationId!);
     const bid = await prisma.bid.findUnique({
-      where: {
-        rfqId_supplierId: { rfqId, supplierId: supplierProfile?.id ?? '' },
-      },
+      where: { rfqId_supplierId: { rfqId, supplierId: supplierProfile?.id ?? '' } },
       include: { items: { include: { rfqItem: true } } },
     });
     sendSuccess(res, bid ? [bid] : []);
@@ -134,9 +146,8 @@ export const getBidsForRFQ = async (req: AuthRequest, res: Response): Promise<vo
   const bids = await prisma.bid.findMany({
     where: { rfqId },
     include: {
-      supplier: {
-        include: { user: { select: { firstName: true, lastName: true, email: true } } },
-      },
+      supplier: { select: { companyName: true, categories: true, status: true } },
+      supplierOrg: { select: { id: true, name: true, slug: true } },
       items: { include: { rfqItem: true } },
       documents: true,
     },
@@ -148,7 +159,6 @@ export const getBidsForRFQ = async (req: AuthRequest, res: Response): Promise<vo
 export const evaluateBid = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { action, score, evaluationNotes } = req.body;
-  // action: SHORTLIST | REJECT
 
   const bid = await prisma.bid.findUnique({ where: { id } });
   if (!bid) { sendError(res, 'Bid not found', 404); return; }
@@ -159,13 +169,23 @@ export const evaluateBid = async (req: AuthRequest, res: Response): Promise<void
     data: { status, score, evaluationNotes },
   });
 
-  await notificationService.create({
-    userId: (await prisma.supplierProfile.findUnique({ where: { id: bid.supplierId }, include: { user: true } }))!.userId,
-    title: `Bid ${status === 'SHORTLISTED' ? 'Shortlisted' : 'Rejected'}`,
-    message: `Your bid has been ${status.toLowerCase()}.`,
-    type: status === 'SHORTLISTED' ? 'SUCCESS' : 'WARNING',
-    link: `/supplier/bids/${id}`,
+  // Notify all active users in the supplier org
+  const supplierUsers = await prisma.user.findMany({
+    where: { organizationId: bid.supplierOrgId, isActive: true },
+    select: { id: true },
   });
+  await Promise.all(
+    supplierUsers.map((u) =>
+      notificationService.create({
+        userId: u.id,
+        organizationId: bid.supplierOrgId,
+        title: `Bid ${status === 'SHORTLISTED' ? 'Shortlisted' : 'Rejected'}`,
+        message: `Your bid has been ${status.toLowerCase()}.`,
+        type: status === 'SHORTLISTED' ? 'SUCCESS' : 'WARNING',
+        link: `/org/${req.user!.orgSlug}/bids/${id}`,
+      })
+    )
+  );
 
   sendSuccess(res, updated);
 };
@@ -176,65 +196,72 @@ export const awardBid = async (req: AuthRequest, res: Response): Promise<void> =
   const bid = await prisma.bid.findUnique({
     where: { id },
     include: {
-      rfq: { include: { items: true, corporateOffice: true } },
-      supplier: { include: { user: true } },
+      rfq: { include: { items: true, corporateOffice: true, organization: true } },
+      supplier: true,
       items: { include: { rfqItem: true } },
     },
   });
 
   if (!bid) { sendError(res, 'Bid not found', 404); return; }
   if (bid.rfq.status !== 'EVALUATION') {
-    sendError(res, 'RFQ must be in EVALUATION status to award', 400);
-    return;
+    sendError(res, 'RFQ must be in EVALUATION status to award', 400); return;
   }
 
-  // Mark all other bids as REJECTED
+  // Reject all other bids
   await prisma.bid.updateMany({
     where: { rfqId: bid.rfqId, id: { not: id } },
     data: { status: 'REJECTED' },
   });
 
-  // Award this bid
   await prisma.bid.update({ where: { id }, data: { status: 'AWARDED' } });
-
-  // Update RFQ status
   await prisma.rFQ.update({ where: { id: bid.rfqId }, data: { status: 'AWARDED' } });
 
-  // Auto-create PO
+  // Auto-create PO with org context
   const po = await poService.createFromBid(bid);
 
-  // Notify supplier
-  await notificationService.create({
-    userId: bid.supplier.userId,
-    title: 'Bid Awarded',
-    message: `Congratulations! Your bid for "${bid.rfq.title}" has been awarded. A Purchase Order has been created.`,
-    type: 'SUCCESS',
-    link: `/supplier/purchase-orders/${po.id}`,
+  // Notify all active users in the supplier org
+  const supplierUsers = await prisma.user.findMany({
+    where: { organizationId: bid.supplierOrgId, isActive: true },
+    select: { id: true, email: true, firstName: true },
   });
 
-  await emailService.sendBidAwardedEmail(
-    bid.supplier.user.email,
-    bid.supplier.user.firstName,
-    bid.rfq.title,
-    po.poNumber
+  await Promise.all(
+    supplierUsers.map(async (u) => {
+      await notificationService.create({
+        userId: u.id,
+        organizationId: bid.supplierOrgId,
+        title: 'Bid Awarded',
+        message: `Congratulations! Your bid for "${bid.rfq.title}" has been awarded. A Purchase Order has been created.`,
+        type: 'SUCCESS',
+        link: `/org/${req.user!.orgSlug}/purchase-orders/${po.id}`,
+      });
+      await emailService.sendBidAwardedEmail(u.email, u.firstName, bid.rfq.title, po.poNumber);
+    })
   );
 
   sendSuccess(res, { bid, purchaseOrder: po });
 };
 
 export const getMyBids = async (req: AuthRequest, res: Response): Promise<void> => {
-  const supplierProfile = await prisma.supplierProfile.findUnique({
-    where: { userId: req.user!.userId },
-  });
+  const orgId = req.user!.organizationId;
+  if (!orgId) { sendError(res, 'Organization context required', 400); return; }
+
+  const supplierProfile = await getSupplierProfile(orgId);
   if (!supplierProfile) {
-    sendError(res, 'Supplier profile not found', 404);
-    return;
+    sendError(res, 'Supplier profile not found for your organisation', 404); return;
   }
 
   const bids = await prisma.bid.findMany({
     where: { supplierId: supplierProfile.id },
     include: {
-      rfq: { select: { title: true, deadline: true, status: true } },
+      rfq: {
+        select: {
+          title: true,
+          deadline: true,
+          status: true,
+          organization: { select: { id: true, name: true, slug: true } },
+        },
+      },
       items: true,
     },
     orderBy: { createdAt: 'desc' },

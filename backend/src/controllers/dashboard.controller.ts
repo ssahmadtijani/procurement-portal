@@ -4,11 +4,14 @@ import { sendSuccess } from '../utils/response.utils';
 import { AuthRequest } from '../middleware/auth.middleware';
 
 export const getDashboardStats = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { role, userId } = req.user!;
+  const { role, organizationId } = req.user!;
 
   switch (role) {
-    case 'ADMIN': {
+    case 'PLATFORM_ADMIN': {
       const [
+        totalOrgs,
+        buyerOrgs,
+        supplierOrgs,
         totalSuppliers,
         pendingSuppliers,
         verifiedSuppliers,
@@ -19,6 +22,9 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
         pendingInvoices,
         totalPayments,
       ] = await Promise.all([
+        prisma.organization.count({ where: { status: 'ACTIVE' } }),
+        prisma.organization.count({ where: { type: 'BUYER', status: 'ACTIVE' } }),
+        prisma.organization.count({ where: { type: 'SUPPLIER_COMPANY', status: 'ACTIVE' } }),
         prisma.supplierProfile.count(),
         prisma.supplierProfile.count({ where: { status: 'PENDING' } }),
         prisma.supplierProfile.count({ where: { status: 'VERIFIED' } }),
@@ -34,38 +40,29 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
         by: ['status'],
         _count: { status: true },
       });
-      const supplierByCategory = await prisma.supplierProfile.findMany({
-        where: { status: 'VERIFIED' },
-        select: { categories: true },
-      });
 
       sendSuccess(res, {
-        totalSuppliers,
-        pendingSuppliers,
-        verifiedSuppliers,
-        totalRFQs,
-        activeRFQs,
-        totalPOs,
-        totalInvoices,
-        pendingInvoices,
+        totalOrgs, buyerOrgs, supplierOrgs,
+        totalSuppliers, pendingSuppliers, verifiedSuppliers,
+        totalRFQs, activeRFQs,
+        totalPOs, totalInvoices, pendingInvoices,
         totalPaymentsAmount: totalPayments._sum.amount ?? 0,
         rfqByStatus,
-        supplierByCategory,
       });
       break;
     }
 
+    case 'ORG_ADMIN':
     case 'CORPORATE_OFFICE': {
-      const corp = await prisma.corporateOffice.findUnique({ where: { userId } });
       const [totalRFQs, openRFQs, awardedRFQs, totalPOs, activePOs] = await Promise.all([
-        prisma.rFQ.count({ where: { corporateOfficeId: corp?.id } }),
-        prisma.rFQ.count({ where: { corporateOfficeId: corp?.id, status: 'OPEN' } }),
-        prisma.rFQ.count({ where: { corporateOfficeId: corp?.id, status: 'AWARDED' } }),
-        prisma.purchaseOrder.count({ where: { corporateOfficeId: corp?.id } }),
-        prisma.purchaseOrder.count({ where: { corporateOfficeId: corp?.id, status: { in: ['SENT', 'ACKNOWLEDGED'] } } }),
+        prisma.rFQ.count({ where: { organizationId: organizationId! } }),
+        prisma.rFQ.count({ where: { organizationId: organizationId!, status: 'OPEN' } }),
+        prisma.rFQ.count({ where: { organizationId: organizationId!, status: 'AWARDED' } }),
+        prisma.purchaseOrder.count({ where: { buyerOrgId: organizationId! } }),
+        prisma.purchaseOrder.count({ where: { buyerOrgId: organizationId!, status: { in: ['SENT', 'ACKNOWLEDGED'] } } }),
       ]);
       const recentRFQs = await prisma.rFQ.findMany({
-        where: { corporateOfficeId: corp?.id },
+        where: { organizationId: organizationId! },
         orderBy: { createdAt: 'desc' },
         take: 5,
         include: { _count: { select: { bids: true } } },
@@ -75,7 +72,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
     }
 
     case 'SUPPLIER': {
-      const sp = await prisma.supplierProfile.findUnique({ where: { userId } });
+      const sp = await prisma.supplierProfile.findUnique({ where: { organizationId: organizationId! } });
       const [totalBids, awardedBids, activePOs, pendingInvoices, totalEarnings] = await Promise.all([
         prisma.bid.count({ where: { supplierId: sp?.id } }),
         prisma.bid.count({ where: { supplierId: sp?.id, status: 'AWARDED' } }),
@@ -92,10 +89,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
         _count: { score: true },
       });
       sendSuccess(res, {
-        totalBids,
-        awardedBids,
-        activePOs,
-        pendingInvoices,
+        totalBids, awardedBids, activePOs, pendingInvoices,
         totalEarnings: totalEarnings._sum.amount ?? 0,
         averageRating: avgRating._avg.score ?? 0,
         totalRatings: avgRating._count.score,
@@ -105,16 +99,16 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
 
     case 'PROCUREMENT_OFFICER': {
       const [openRFQs, evaluationRFQs, pendingBids, totalPOs] = await Promise.all([
-        prisma.rFQ.count({ where: { status: 'OPEN' } }),
-        prisma.rFQ.count({ where: { status: 'EVALUATION' } }),
-        prisma.bid.count({ where: { status: 'SUBMITTED' } }),
-        prisma.purchaseOrder.count(),
+        prisma.rFQ.count({ where: { organizationId: organizationId!, status: 'OPEN' } }),
+        prisma.rFQ.count({ where: { organizationId: organizationId!, status: 'EVALUATION' } }),
+        prisma.bid.count({ where: { rfq: { organizationId: organizationId! }, status: 'SUBMITTED' } }),
+        prisma.purchaseOrder.count({ where: { buyerOrgId: organizationId! } }),
       ]);
       const recentBids = await prisma.bid.findMany({
-        where: { status: 'SUBMITTED' },
+        where: { rfq: { organizationId: organizationId! }, status: 'SUBMITTED' },
         include: {
           rfq: { select: { id: true, title: true } },
-          supplier: { include: { user: { select: { firstName: true, lastName: true } } } },
+          supplier: { include: { organization: { select: { name: true } } } },
         },
         orderBy: { createdAt: 'desc' },
         take: 5,
@@ -125,13 +119,16 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
 
     case 'FINANCE': {
       const [pendingInvoices, approvedInvoices, paidInvoices, totalPaid] = await Promise.all([
-        prisma.invoice.count({ where: { status: 'PENDING' } }),
-        prisma.invoice.count({ where: { status: 'APPROVED' } }),
-        prisma.invoice.count({ where: { status: 'PAID' } }),
-        prisma.payment.aggregate({ where: { status: 'COMPLETED' }, _sum: { amount: true } }),
+        prisma.invoice.count({ where: { buyerOrgId: organizationId!, status: 'PENDING' } }),
+        prisma.invoice.count({ where: { buyerOrgId: organizationId!, status: 'APPROVED' } }),
+        prisma.invoice.count({ where: { buyerOrgId: organizationId!, status: 'PAID' } }),
+        prisma.payment.aggregate({
+          where: { invoice: { buyerOrgId: organizationId! }, status: 'COMPLETED' },
+          _sum: { amount: true },
+        }),
       ]);
       const recentInvoices = await prisma.invoice.findMany({
-        where: { status: 'PENDING' },
+        where: { buyerOrgId: organizationId!, status: 'PENDING' },
         include: {
           supplier: { select: { companyName: true } },
           po: { select: { poNumber: true } },
@@ -140,9 +137,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
         take: 5,
       });
       sendSuccess(res, {
-        pendingInvoices,
-        approvedInvoices,
-        paidInvoices,
+        pendingInvoices, approvedInvoices, paidInvoices,
         totalPaidAmount: totalPaid._sum.amount ?? 0,
         recentInvoices,
       });
@@ -156,13 +151,15 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
 
 export const getReports = async (req: AuthRequest, res: Response): Promise<void> => {
   const { from, to } = req.query as { from?: string; to?: string };
-  const dateFilter = from && to
-    ? { gte: new Date(from), lte: new Date(to) }
-    : undefined;
+  const { role, organizationId } = req.user!;
+
+  const dateFilter = from && to ? { gte: new Date(from), lte: new Date(to) } : undefined;
+
+  const orgFilter = role === 'PLATFORM_ADMIN' ? {} : { buyerOrgId: organizationId! };
 
   const [pos, invoices, topSuppliers] = await Promise.all([
     prisma.purchaseOrder.findMany({
-      where: dateFilter ? { createdAt: dateFilter } : {},
+      where: { ...orgFilter, ...(dateFilter ? { createdAt: dateFilter } : {}) },
       include: {
         supplier: { select: { companyName: true } },
         rfq: { select: { title: true } },
@@ -170,7 +167,7 @@ export const getReports = async (req: AuthRequest, res: Response): Promise<void>
       orderBy: { createdAt: 'desc' },
     }),
     prisma.invoice.findMany({
-      where: dateFilter ? { createdAt: dateFilter } : {},
+      where: { ...orgFilter, ...(dateFilter ? { createdAt: dateFilter } : {}) },
       include: {
         supplier: { select: { companyName: true } },
         po: { select: { poNumber: true } },

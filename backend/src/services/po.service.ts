@@ -3,13 +3,15 @@ import prisma from '../config/db';
 import { Bid, BidItem, RFQItem } from '@prisma/client';
 
 type BidWithDetails = Bid & {
+  supplierOrgId: string;
   rfq: {
     id: string;
     title: string;
+    organizationId: string;
     corporateOfficeId: string | null;
     items: RFQItem[];
   };
-  supplier: { id: string; userId: string };
+  supplier: { id: string };
   items: BidItem[];
 };
 
@@ -26,6 +28,8 @@ export const poService = {
         rfqId: bid.rfqId,
         bidId: bid.id,
         supplierId: bid.supplierId,
+        buyerOrgId: bid.rfq.organizationId,
+        supplierOrgId: bid.supplierOrgId,
         corporateOfficeId: bid.rfq.corporateOfficeId,
         totalAmount: bid.totalAmount,
         currency: bid.currency,
