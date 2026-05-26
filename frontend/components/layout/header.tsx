@@ -10,13 +10,15 @@ export function DashboardHeader() {
 
   return (
     <header className="h-14 border-b bg-card px-6 flex items-center justify-between shrink-0">
-      <div />
+      <div className="text-sm text-muted-foreground">
+        {user?.organization?.name && (
+          <span className="font-medium text-foreground">{user.organization.name}</span>
+        )}
+      </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 text-sm">
           <User className="w-4 h-4 text-muted-foreground" />
-          <span className="font-medium">
-            {user?.firstName} {user?.lastName}
-          </span>
+          <span className="font-medium">{user?.firstName} {user?.lastName}</span>
           <span className="text-muted-foreground">
             — {ROLE_LABELS[user?.role ?? ''] ?? user?.role}
           </span>

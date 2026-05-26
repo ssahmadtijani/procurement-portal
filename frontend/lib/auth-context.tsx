@@ -1,25 +1,30 @@
 'use client';
 
 import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
+  createContext, useContext, useEffect, useState, ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import { ROLE_DASHBOARD } from '@/lib/utils';
 
-interface User {
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  type: 'BUYER' | 'SUPPLIER_COMPANY';
+  status: string;
+  plan: string;
+}
+
+export interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
   role: string;
   isActive: boolean;
+  organizationId?: string;
+  organization?: Organization;
   supplierProfile?: { id: string; companyName: string; status: string } | null;
-  corporateProfile?: { id: string; officeName: string } | null;
 }
 
 interface AuthContextValue {
@@ -31,6 +36,13 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function getDashboardPath(user: User): string {
+  if (user.role === 'PLATFORM_ADMIN') return '/platform/dashboard';
+  const slug = user.organization?.slug;
+  if (!slug) return '/onboarding';
+  return `/org/${slug}/dashboard`;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -55,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { user: loggedIn, accessToken } = res.data.data;
     localStorage.setItem('accessToken', accessToken);
     setUser(loggedIn);
-    router.push(ROLE_DASHBOARD[loggedIn.role] ?? '/dashboard');
+    router.push(getDashboardPath(loggedIn));
   };
 
   const logout = async () => {
@@ -65,9 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   };
 
-  const refreshUser = async () => {
-    await fetchMe();
-  };
+  const refreshUser = async () => { await fetchMe(); };
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
