@@ -16,8 +16,8 @@ router.use(authenticate);
 
 router.get('/', listPurchaseOrders);
 router.get('/:id', getPurchaseOrderById);
-router.put('/:id', authorize('PROCUREMENT_OFFICER'), updatePODetails);
-router.post('/:id/send', authorize('PROCUREMENT_OFFICER'), sendPurchaseOrder);
+router.put('/:id', authorize('PROCUREMENT_OFFICER', 'ORG_ADMIN', 'CORPORATE_OFFICE'), updatePODetails);
+router.post('/:id/send', authorize('PROCUREMENT_OFFICER', 'ORG_ADMIN', 'CORPORATE_OFFICE'), sendPurchaseOrder);
 router.post('/:id/acknowledge', authorize('SUPPLIER', 'ORG_ADMIN'), acknowledgePO);
 router.post('/:id/complete', authorize('PROCUREMENT_OFFICER', 'CORPORATE_OFFICE'), completePO);
 
