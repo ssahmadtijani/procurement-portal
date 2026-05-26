@@ -30,4 +30,4 @@ RUN mkdir -p uploads && chown appuser:nodejs uploads
 USER appuser
 
 EXPOSE 4000
-CMD ["node", "dist/server.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/server.js"]
