@@ -18,7 +18,7 @@ export default function PlatformSuppliersPage() {
   });
 
   const verifyMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/platform/suppliers/${id}/verify`),
+    mutationFn: (id: string) => api.post(`/platform/suppliers/${id}/verify`, { action: 'VERIFY' }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['platform-pending-suppliers'] }); toast({ title: 'Supplier verified' }); },
     onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
   });
@@ -41,16 +41,16 @@ export default function PlatformSuppliersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.suppliers?.map((s: { id: string; companyName: string; category: string; country: string; verificationStatus: string; createdAt: string; organization: { name: string } }) => (
+              {data?.suppliers?.map((s: { id: string; companyName: string; categories: string[]; country: string; status: string; createdAt: string; organization: { name: string } }) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.companyName}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{s.organization?.name}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{s.category}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{s.categories?.[0] ?? '—'}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{s.country}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{formatDate(s.createdAt)}</TableCell>
-                  <TableCell><StatusBadge status={s.verificationStatus} /></TableCell>
+                  <TableCell><StatusBadge status={s.status} /></TableCell>
                   <TableCell>
-                    {s.verificationStatus === 'PENDING' && (
+                    {s.status === 'PENDING' && (
                       <Button size="sm" onClick={() => verifyMutation.mutate(s.id)} disabled={verifyMutation.isPending}>
                         Verify
                       </Button>

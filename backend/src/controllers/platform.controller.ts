@@ -108,5 +108,5 @@ export const listPendingSuppliers = async (_req: AuthRequest, res: Response): Pr
     },
     orderBy: { createdAt: 'asc' },
   });
-  sendSuccess(res, suppliers);
+  sendSuccess(res, { suppliers });
 };
