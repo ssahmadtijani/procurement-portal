@@ -34,21 +34,21 @@ export default function PurchaseOrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.pos?.map((po: { id: string; poNumber: string; amount: number; currency: string; status: string; issueDate: string; deliveryDate: string; supplierProfile: { companyName: string } }) => (
+              {data?.purchaseOrders?.map((po: { id: string; poNumber: string; totalAmount: number; currency: string; status: string; createdAt: string; deliveryDate: string | null; supplier: { organization: { name: string } } }) => (
                 <TableRow key={po.id}>
                   <TableCell>
                     <Link href={`/org/${slug}/purchase-orders/${po.id}`} className="text-primary hover:underline font-medium">
                       {po.poNumber}
                     </Link>
                   </TableCell>
-                  <TableCell>{po.supplierProfile?.companyName}</TableCell>
-                  <TableCell className="font-medium">{formatCurrency(po.amount, po.currency)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatDate(po.issueDate)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatDate(po.deliveryDate)}</TableCell>
+                  <TableCell>{po.supplier?.organization?.name}</TableCell>
+                  <TableCell className="font-medium">{formatCurrency(po.totalAmount, po.currency)}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{formatDate(po.createdAt)}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{po.deliveryDate ? formatDate(po.deliveryDate) : '—'}</TableCell>
                   <TableCell><StatusBadge status={po.status} /></TableCell>
                 </TableRow>
               ))}
-              {data?.pos?.length === 0 && (
+              {data?.purchaseOrders?.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No purchase orders found.</TableCell>
                 </TableRow>

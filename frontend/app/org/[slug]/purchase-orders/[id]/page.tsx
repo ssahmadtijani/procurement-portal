@@ -50,14 +50,14 @@ export default function PODetailPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">{po.poNumber}</h1>
-          <p className="text-muted-foreground text-sm">Issued {formatDate(po.issueDate)}</p>
+          <p className="text-muted-foreground text-sm">Issued {formatDate(po.createdAt)}</p>
         </div>
         <StatusBadge status={po.status} />
       </div>
 
       <div className="bg-card border rounded-lg p-5 grid grid-cols-2 gap-4 text-sm">
-        <div><span className="text-muted-foreground">Supplier: </span>{po.supplierProfile?.companyName}</div>
-        <div><span className="text-muted-foreground">Amount: </span><span className="font-semibold">{formatCurrency(po.amount, po.currency)}</span></div>
+        <div><span className="text-muted-foreground">Supplier: </span>{po.supplier?.organization?.name}</div>
+        <div><span className="text-muted-foreground">Amount: </span><span className="font-semibold">{formatCurrency(po.totalAmount, po.currency)}</span></div>
         <div><span className="text-muted-foreground">Delivery Date: </span>{formatDate(po.deliveryDate)}</div>
         {po.rfq && <div><span className="text-muted-foreground">RFQ: </span>{po.rfq.title}</div>}
       </div>
