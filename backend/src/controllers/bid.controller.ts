@@ -281,6 +281,7 @@ export const getMyBids = async (req: AuthRequest, res: Response): Promise<void> 
     include: {
       rfq: {
         select: {
+          id: true,
           title: true,
           deadline: true,
           status: true,

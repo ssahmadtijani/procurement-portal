@@ -36,17 +36,17 @@ export default function BidsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.bids?.map((bid: { id: string; amount: number; currency: string; status: string; createdAt: string; rfq: { id: string; title: string }; supplierProfile: { companyName: string } }) => (
+              {data?.bids?.map((bid: { id: string; rfqId: string; totalAmount: number; currency: string; status: string; createdAt: string; rfq: { title: string }; supplier: { companyName: string } }) => (
                 <TableRow key={bid.id}>
                   <TableCell>
-                    <Link href={`/org/${slug}/rfqs/${bid.rfq?.id}`} className="text-primary hover:underline">
+                    <Link href={`/org/${slug}/rfqs/${bid.rfqId}`} className="text-primary hover:underline">
                       {bid.rfq?.title}
                     </Link>
                   </TableCell>
-                  <TableCell className="font-medium">{formatCurrency(bid.amount, bid.currency)}</TableCell>
+                  <TableCell className="font-medium">{formatCurrency(bid.totalAmount, bid.currency)}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{formatDate(bid.createdAt)}</TableCell>
                   <TableCell><StatusBadge status={bid.status} /></TableCell>
-                  {!isSupplier && <TableCell>{bid.supplierProfile?.companyName}</TableCell>}
+                  {!isSupplier && <TableCell>{bid.supplier?.companyName}</TableCell>}
                 </TableRow>
               ))}
               {data?.bids?.length === 0 && (
