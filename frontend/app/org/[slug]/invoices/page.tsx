@@ -44,14 +44,14 @@ export default function InvoicesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.invoices?.map((inv: { id: string; invoiceNumber: string; amount: number; currency: string; status: string; issueDate: string; dueDate: string; supplier: { companyName: string }; po: { poNumber: string } }) => (
+              {data?.invoices?.map((inv: { id: string; invoiceNumber: string; amount: number; currency: string; status: string; createdAt: string; dueDate: string | null; supplier: { organization: { name: string } }; po: { poNumber: string } }) => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                  <TableCell>{inv.supplier?.companyName}</TableCell>
+                  <TableCell>{inv.supplier?.organization?.name}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{inv.po?.poNumber}</TableCell>
                   <TableCell className="font-medium">{formatCurrency(inv.amount, inv.currency)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatDate(inv.issueDate)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatDate(inv.dueDate)}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{formatDate(inv.createdAt)}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{inv.dueDate ? formatDate(inv.dueDate) : '—'}</TableCell>
                   <TableCell><StatusBadge status={inv.status} /></TableCell>
                   {isFinance && (
                     <TableCell>
