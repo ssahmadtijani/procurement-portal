@@ -179,10 +179,10 @@ export default function RFQDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bids.map((bid: { id: string; amount: number; currency: string; status: string; notes: string; supplierProfile: { companyName: string } }) => (
+                {bids.map((bid: { id: string; totalAmount: number; currency: string; status: string; notes: string; supplier: { companyName: string } }) => (
                   <TableRow key={bid.id}>
-                    <TableCell>{bid.supplierProfile?.companyName}</TableCell>
-                    <TableCell className="font-medium">{formatCurrency(bid.amount, bid.currency)}</TableCell>
+                    <TableCell>{bid.supplier?.companyName}</TableCell>
+                    <TableCell className="font-medium">{formatCurrency(bid.totalAmount, bid.currency)}</TableCell>
                     <TableCell><StatusBadge status={bid.status} /></TableCell>
                     <TableCell className="text-muted-foreground text-sm max-w-xs truncate">{bid.notes}</TableCell>
                     {rfq.status === 'EVALUATION' && (
