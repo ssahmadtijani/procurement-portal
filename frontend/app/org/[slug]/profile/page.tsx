@@ -51,7 +51,7 @@ export default function SupplierProfilePage() {
 
   const saveMutation = useMutation({
     mutationFn: (data: ProfileForm) =>
-      profile ? api.put('/suppliers/profile', data) : api.post('/suppliers/register', data),
+      profile ? api.put('/suppliers/profile', data) : api.post('/suppliers/profile', data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplier-profile-my'] }); toast({ title: 'Profile saved' }); },
     onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
   });

@@ -16,7 +16,7 @@ export const createRFQ = async (req: AuthRequest, res: Response): Promise<void> 
   const orgId = req.user!.organizationId;
   if (!orgId) { sendError(res, 'Organization context required', 400); return; }
 
-  const { title, description, category, deadline, visibility, items } = req.body;
+  const { title, description, category, deadline, visibility, budget, currency, items } = req.body;
 
   const corporateOffice = await prisma.corporateOffice.findUnique({
     where: { userId: req.user!.userId },
@@ -28,11 +28,13 @@ export const createRFQ = async (req: AuthRequest, res: Response): Promise<void> 
       description,
       category,
       deadline: new Date(deadline),
+      budget: budget ? parseFloat(budget) : undefined,
+      currency: currency ?? 'USD',
       visibility: visibility ?? 'PUBLIC',
       organizationId: orgId,
       createdById: req.user!.userId,
       corporateOfficeId: corporateOffice?.id,
-      items: {
+      items: items?.length ? {
         create: (items as Array<{
           itemName: string;
           quantity: number;
@@ -46,7 +48,7 @@ export const createRFQ = async (req: AuthRequest, res: Response): Promise<void> 
           specifications: item.specifications,
           estimatedPrice: item.estimatedPrice,
         })),
-      },
+      } : undefined,
     },
     include: { items: true },
   });

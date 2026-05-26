@@ -32,7 +32,7 @@ export default function RFQDetailPage() {
 
   const { data: bids } = useQuery({
     queryKey: ['rfq-bids', id],
-    queryFn: () => api.get(`/rfqs/${id}/bids`).then((r) => r.data.data),
+    queryFn: () => api.get(`/bids/rfq/${id}`).then((r) => r.data.data),
     enabled: isBuyer,
   });
 
@@ -48,7 +48,7 @@ export default function RFQDetailPage() {
   });
 
   const bidMutation = useMutation({
-    mutationFn: () => api.post('/bids', { rfqId: id, amount: parseFloat(bidAmount), notes: bidNotes }),
+    mutationFn: () => api.post('/bids', { rfqId: id, totalAmount: parseFloat(bidAmount), notes: bidNotes }),
     onSuccess: () => { toast({ title: 'Bid submitted' }); setBidAmount(''); setBidNotes(''); router.push(`/org/${slug}/bids`); },
     onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
   });

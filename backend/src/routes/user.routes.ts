@@ -8,11 +8,11 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', authorize('ADMIN'), listUsers);
+router.get('/', authorize('ORG_ADMIN', 'PLATFORM_ADMIN'), listUsers);
 
 router.patch(
   '/:id',
-  authorize('ADMIN'),
+  authorize('ORG_ADMIN', 'PLATFORM_ADMIN'),
   [param('id').isUUID(), body('isActive').isBoolean()],
   updateUser
 );

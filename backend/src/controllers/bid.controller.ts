@@ -27,7 +27,13 @@ export const submitBid = async (req: AuthRequest, res: Response): Promise<void> 
     return;
   }
 
-  const { rfqId, totalAmount, currency, notes, validUntil, items } = req.body;
+  const { rfqId, notes, validUntil, items } = req.body;
+  // Support both 'amount' (simple) and 'totalAmount' (itemised)
+  const totalAmount: number = req.body.totalAmount ?? req.body.amount;
+  if (!totalAmount || totalAmount <= 0) {
+    sendError(res, 'Bid amount is required', 422); return;
+  }
+  const currency: string = req.body.currency ?? 'USD';
 
   const rfq = await prisma.rFQ.findUnique({
     where: { id: rfqId },
@@ -64,7 +70,7 @@ export const submitBid = async (req: AuthRequest, res: Response): Promise<void> 
       currency: currency ?? 'USD',
       notes,
       validUntil: validUntil ? new Date(validUntil) : undefined,
-      items: {
+      items: items?.length ? {
         create: (items as Array<{
           rfqItemId: string;
           unitPrice: number;
@@ -76,7 +82,7 @@ export const submitBid = async (req: AuthRequest, res: Response): Promise<void> 
           totalPrice: item.totalPrice,
           notes: item.notes,
         })),
-      },
+      } : undefined,
     },
     include: { items: true },
   });
@@ -242,6 +248,25 @@ export const awardBid = async (req: AuthRequest, res: Response): Promise<void> =
   sendSuccess(res, { bid, purchaseOrder: po });
 };
 
+export const getAllBids = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { role, organizationId } = req.user!;
+
+  const where = role === 'PLATFORM_ADMIN'
+    ? {}
+    : { rfq: { organizationId } };
+
+  const bids = await prisma.bid.findMany({
+    where,
+    include: {
+      rfq: { select: { id: true, title: true, status: true, organizationId: true } },
+      supplier: { select: { companyName: true } },
+      supplierOrg: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  sendSuccess(res, { bids });
+};
+
 export const getMyBids = async (req: AuthRequest, res: Response): Promise<void> => {
   const orgId = req.user!.organizationId;
   if (!orgId) { sendError(res, 'Organization context required', 400); return; }
@@ -266,5 +291,5 @@ export const getMyBids = async (req: AuthRequest, res: Response): Promise<void> 
     },
     orderBy: { createdAt: 'desc' },
   });
-  sendSuccess(res, bids);
+  sendSuccess(res, { bids });
 };

@@ -8,6 +8,6 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/stats', getDashboardStats);
-router.get('/reports', authorize('ADMIN', 'FINANCE', 'PROCUREMENT_OFFICER'), getReports);
+router.get('/reports', authorize('PLATFORM_ADMIN', 'ORG_ADMIN', 'FINANCE', 'PROCUREMENT_OFFICER'), getReports);
 
 export default router;

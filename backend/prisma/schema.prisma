@@ -293,6 +293,8 @@ model RFQ {
   description       String?
   category          String?
   deadline          DateTime
+  budget            Float?
+  currency          String        @default("USD")
   status            RFQStatus     @default(DRAFT)
   visibility        RFQVisibility @default(PUBLIC)
   organizationId    String

@@ -16,26 +16,28 @@ const router = Router();
 
 router.use(authenticate);
 
-// Supplier: manage own profile
+// Supplier: manage own profile (SUPPLIER users + ORG_ADMIN of supplier company)
 router.post(
   '/profile',
-  authorize('SUPPLIER'),
+  authorize('SUPPLIER', 'ORG_ADMIN'),
   [
     body('companyName').trim().notEmpty(),
-    body('regNumber').trim().notEmpty(),
   ],
   registerSupplierProfile
 );
-router.get('/profile/me', authorize('SUPPLIER'), getMySupplierProfile);
-router.put('/profile/me', authorize('SUPPLIER'), updateSupplierProfile);
+// Support both /profile/me and /profile for frontend compatibility
+router.get('/profile/me', authorize('SUPPLIER', 'ORG_ADMIN'), getMySupplierProfile);
+router.get('/profile', authorize('SUPPLIER', 'ORG_ADMIN'), getMySupplierProfile);
+router.put('/profile/me', authorize('SUPPLIER', 'ORG_ADMIN'), updateSupplierProfile);
+router.put('/profile', authorize('SUPPLIER', 'ORG_ADMIN'), updateSupplierProfile);
 
 // Admin: manage all suppliers
-router.get('/', authorize('ADMIN', 'PROCUREMENT_OFFICER', 'CORPORATE_OFFICE'), listSuppliers);
-router.get('/verified', authorize('ADMIN', 'PROCUREMENT_OFFICER', 'CORPORATE_OFFICE'), getVerifiedSuppliers);
-router.get('/:id', authorize('ADMIN', 'PROCUREMENT_OFFICER'), getSupplierById);
+router.get('/', authorize('ORG_ADMIN', 'PROCUREMENT_OFFICER', 'CORPORATE_OFFICE', 'PLATFORM_ADMIN'), listSuppliers);
+router.get('/verified', authorize('ORG_ADMIN', 'PROCUREMENT_OFFICER', 'CORPORATE_OFFICE', 'PLATFORM_ADMIN'), getVerifiedSuppliers);
+router.get('/:id', authorize('ORG_ADMIN', 'PROCUREMENT_OFFICER', 'CORPORATE_OFFICE', 'PLATFORM_ADMIN'), getSupplierById);
 router.post(
   '/:id/verify',
-  authorize('ADMIN'),
+  authorize('ORG_ADMIN', 'PLATFORM_ADMIN'),
   [body('action').isIn(['VERIFY', 'REJECT'])],
   verifySupplier
 );

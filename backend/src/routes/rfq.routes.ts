@@ -22,20 +22,17 @@ router.get('/:id', getRFQById);
 
 router.post(
   '/',
-  authorize('CORPORATE_OFFICE'),
+  authorize('CORPORATE_OFFICE', 'ORG_ADMIN', 'PROCUREMENT_OFFICER'),
   [
     body('title').trim().notEmpty(),
     body('deadline').isISO8601(),
-    body('items').isArray({ min: 1 }),
-    body('items.*.itemName').trim().notEmpty(),
-    body('items.*.quantity').isFloat({ gt: 0 }),
   ],
   createRFQ
 );
 
 router.put(
   '/:id',
-  authorize('CORPORATE_OFFICE'),
+  authorize('CORPORATE_OFFICE', 'ORG_ADMIN', 'PROCUREMENT_OFFICER'),
   [body('title').optional().trim().notEmpty()],
   updateRFQ
 );

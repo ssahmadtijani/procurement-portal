@@ -24,15 +24,23 @@ export default function PODetailPage() {
     queryFn: () => api.get(`/purchase-orders/${id}`).then((r) => r.data.data),
   });
 
-  const action = (endpoint: string, successMsg: string) => useMutation({
-    mutationFn: () => api.post(`/purchase-orders/${id}/${endpoint}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['po', id] }); toast({ title: successMsg }); },
+  const sendMutation = useMutation({
+    mutationFn: () => api.post(`/purchase-orders/${id}/send`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['po', id] }); toast({ title: 'PO Sent to Supplier' }); },
     onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
   });
 
-  const sendMutation = action('send', 'PO Sent to Supplier');
-  const ackMutation = action('acknowledge', 'PO Acknowledged');
-  const completeMutation = action('complete', 'PO Completed');
+  const ackMutation = useMutation({
+    mutationFn: () => api.post(`/purchase-orders/${id}/acknowledge`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['po', id] }); toast({ title: 'PO Acknowledged' }); },
+    onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: () => api.post(`/purchase-orders/${id}/complete`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['po', id] }); toast({ title: 'PO Completed' }); },
+    onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
+  });
 
   if (isLoading) return <p className="text-muted-foreground">Loading…</p>;
   if (!po) return <p className="text-destructive">PO not found</p>;
