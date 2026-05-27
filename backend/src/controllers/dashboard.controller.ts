@@ -52,7 +52,34 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
       break;
     }
 
-    case 'ORG_ADMIN':
+    case 'ORG_ADMIN': {
+      if (req.user!.orgType === 'SUPPLIER_COMPANY') {
+        const sp = await prisma.supplierProfile.findUnique({ where: { organizationId: organizationId! } });
+        const [totalBids, awardedBids, activePOs, pendingInvoices, totalEarnings] = await Promise.all([
+          prisma.bid.count({ where: { supplierId: sp?.id } }),
+          prisma.bid.count({ where: { supplierId: sp?.id, status: 'AWARDED' } }),
+          prisma.purchaseOrder.count({ where: { supplierId: sp?.id, status: { in: ['SENT', 'ACKNOWLEDGED'] } } }),
+          prisma.invoice.count({ where: { supplierId: sp?.id, status: 'PENDING' } }),
+          prisma.payment.aggregate({
+            where: { invoice: { supplierId: sp?.id }, status: 'COMPLETED' },
+            _sum: { amount: true },
+          }),
+        ]);
+        const avgRating = await prisma.supplierRating.aggregate({
+          where: { supplierId: sp?.id },
+          _avg: { score: true },
+          _count: { score: true },
+        });
+        sendSuccess(res, {
+          totalBids, awardedBids, activePOs, pendingInvoices,
+          totalEarnings: totalEarnings._sum.amount ?? 0,
+          averageRating: avgRating._avg.score ?? 0,
+          totalRatings: avgRating._count.score,
+        });
+        break;
+      }
+      // Buyer ORG_ADMIN falls through to CORPORATE_OFFICE logic
+    }
     case 'CORPORATE_OFFICE': {
       const [totalRFQs, openRFQs, awardedRFQs, totalPOs, activePOs] = await Promise.all([
         prisma.rFQ.count({ where: { organizationId: organizationId! } }),
