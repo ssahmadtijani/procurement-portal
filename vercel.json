@@ -1,0 +1,13 @@
+{
+  "experimentalServices": {
+    "frontend": {
+      "root": "frontend",
+      "outputPrefix": "/",
+      "framework": "nextjs"
+    },
+    "backend": {
+      "root": "backend",
+      "outputPrefix": "/_/backend"
+    }
+  }
+}
