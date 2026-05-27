@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { ShoppingBag, CheckCircle2 } from 'lucide-react';
 
 const newOrgSchema = z.object({
   firstName: z.string().min(1),
@@ -75,12 +76,79 @@ function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30">
-      <div className="w-full max-w-lg bg-card rounded-xl shadow-lg p-8 space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold text-primary">Procurement Portal</h1>
-          <p className="text-sm text-muted-foreground">Create your account</p>
+    <div className="min-h-screen flex">
+      {/* ── Left brand panel ── */}
+      <div
+        className="hidden lg:flex lg:w-[40%] relative overflow-hidden flex-col justify-between p-12 sticky top-0 h-screen"
+        style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 45%, #1e1b4b 100%)' }}
+      >
+        <div className="absolute -top-32 -right-32 w-[380px] h-[380px] rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -left-32 w-[380px] h-[380px] rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '28px 28px' }}
+        />
+
+        {/* Logo */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
+            <ShoppingBag className="w-5 h-5 text-cyan-400" />
+          </div>
+          <span className="text-white font-bold text-xl tracking-tight">ProcureFlow</span>
         </div>
+
+        {/* Copy */}
+        <div className="relative z-10 space-y-8">
+          <div>
+            <h2 className="text-4xl font-extrabold text-white leading-tight tracking-tight">
+              Join the Future<br />
+              <span
+                className="text-transparent bg-clip-text"
+                style={{ backgroundImage: 'linear-gradient(90deg, #38bdf8, #818cf8)' }}
+              >
+                of Procurement
+              </span>
+            </h2>
+            <p className="mt-3 text-slate-300 text-base leading-relaxed">
+              Create your organisation and start connecting with buyers and suppliers today.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              'Publish RFQs to a verified supplier network',
+              'Streamline bid evaluation and PO management',
+              'Manage invoices and payments end-to-end',
+              'Real-time spend visibility and compliance reporting',
+            ].map((benefit) => (
+              <div key={benefit} className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                <p className="text-slate-300 text-sm">{benefit}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="relative z-10 text-slate-500 text-xs">
+          Already have an account?{' '}
+          <a href="/login" className="text-cyan-400 hover:underline">Sign in</a>
+        </p>
+      </div>
+
+      {/* ── Right scrollable form ── */}
+      <div className="flex-1 overflow-y-auto bg-background">
+        <div className="min-h-full flex items-start justify-center py-12 px-8">
+          <div className="w-full max-w-lg space-y-6">
+            {/* Mobile logo */}
+            <div className="lg:hidden flex items-center gap-2 justify-center mb-2">
+              <ShoppingBag className="w-5 h-5 text-primary" />
+              <span className="font-bold text-lg text-primary">ProcureFlow</span>
+            </div>
+
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold">Create your account</h1>
+              <p className="text-sm text-muted-foreground">Get started in minutes — no credit card required</p>
+            </div>
 
         {!token && (
           <div className="flex rounded-lg border overflow-hidden">
@@ -178,6 +246,8 @@ function RegisterForm() {
           Already have an account?{' '}
           <Link href="/login" className="text-primary font-medium hover:underline">Sign in</Link>
         </p>
+          </div>
+        </div>
       </div>
     </div>
   );
