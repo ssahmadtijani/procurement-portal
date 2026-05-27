@@ -3,11 +3,11 @@
     "frontend": {
       "root": "frontend",
       "framework": "nextjs",
-      "routePrefix": "/"
+      "mount": "/"
     },
     "backend": {
       "root": "backend",
-      "routePrefix": "/_/backend"
+      "mount": "/_/backend"
     }
   }
 }
