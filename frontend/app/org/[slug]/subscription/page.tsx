@@ -10,9 +10,9 @@ import { useToast } from '@/components/ui/use-toast';
 import { Check } from 'lucide-react';
 
 const PLANS = [
-  { id: 'FREE', name: 'Free', price: '$0/mo', rfqs: 5, members: 3, features: ['5 RFQs/month', '3 members', 'Basic marketplace access'] },
-  { id: 'STARTER', name: 'Starter', price: '$49/mo', rfqs: 20, members: 10, features: ['20 RFQs/month', '10 members', 'Marketplace + Invited RFQs', 'Email notifications'] },
-  { id: 'PROFESSIONAL', name: 'Professional', price: '$149/mo', rfqs: 100, members: 50, features: ['100 RFQs/month', '50 members', 'Analytics & Reports', 'Priority support'] },
+  { id: 'FREE', name: 'Free', price: '₦0/mo', rfqs: 5, members: 3, features: ['5 RFQs/month', '3 members', 'Basic marketplace access'] },
+  { id: 'STARTER', name: 'Starter', price: '₦75,000/mo', rfqs: 20, members: 10, features: ['20 RFQs/month', '10 members', 'Marketplace + Invited RFQs', 'Email notifications'] },
+  { id: 'PROFESSIONAL', name: 'Professional', price: '₦225,000/mo', rfqs: 100, members: 50, features: ['100 RFQs/month', '50 members', 'Analytics & Reports', 'Priority support'] },
   { id: 'ENTERPRISE', name: 'Enterprise', price: 'Custom', rfqs: -1, members: -1, features: ['Unlimited RFQs', 'Unlimited members', 'Dedicated support', 'Custom integrations'] },
 ];
 

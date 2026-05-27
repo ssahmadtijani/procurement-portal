@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { StatCard } from '@/components/shared/stat-card';
-import { Building2, Users, FileText, ShoppingBag, Receipt, DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { Building2, Users, FileText, ShoppingBag, Receipt, Banknote, Clock, CheckCircle } from 'lucide-react';
 
 export default function PlatformReportsPage() {
   const { data, isLoading } = useQuery({
@@ -44,7 +44,7 @@ export default function PlatformReportsPage() {
       <div>
         <h2 className="text-base font-semibold mb-3 text-muted-foreground uppercase tracking-wide text-xs">Financial</h2>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard title="Total Volume" value={formatCurrency(data?.totalVolume ?? 0)} icon={DollarSign} color="green" />
+          <StatCard title="Total Volume" value={formatCurrency(data?.totalVolume ?? 0)} icon={Banknote} color="green" />
           <StatCard title="Pending Supplier Verifications" value={data?.pendingSuppliers ?? 0} icon={Clock} color="yellow" />
         </div>
       </div>
