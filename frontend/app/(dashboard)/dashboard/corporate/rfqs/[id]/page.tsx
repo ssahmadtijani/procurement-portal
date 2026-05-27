@@ -23,7 +23,7 @@ export default function CorporateRFQDetailPage() {
 
   const action = useMutation({
     mutationFn: (act: 'publish' | 'close' | 'cancel') =>
-      api.patch(`/rfqs/${id}/${act}`),
+      api.post(`/rfqs/${id}/${act}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rfq', id] });
       toast({ title: 'RFQ updated' });

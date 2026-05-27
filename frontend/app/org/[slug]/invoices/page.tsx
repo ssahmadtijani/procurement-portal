@@ -38,8 +38,10 @@ export default function InvoicesPage() {
   );
 
   const approveMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/invoices/${id}/approve`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['invoices'] }); toast({ title: 'Invoice Approved' }); },
+    mutationFn: ({ id, action }: { id: string; action: 'APPROVE' | 'REJECT' }) =>
+      api.post(`/invoices/${id}/approve`, { action }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['invoices'] }); toast({ title: 'Invoice updated' }); },
+    onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
   });
 
   const createMutation = useMutation({
@@ -149,8 +151,11 @@ export default function InvoicesPage() {
                   <TableCell><StatusBadge status={inv.status} /></TableCell>
                   {isFinance && (
                     <TableCell>
-                      {inv.status === 'SUBMITTED' && (
-                        <Button size="sm" variant="outline" onClick={() => approveMutation.mutate(inv.id)}>Approve</Button>
+                      {inv.status === 'PENDING' && (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => approveMutation.mutate({ id: inv.id, action: 'APPROVE' })}>Approve</Button>
+                          <Button size="sm" variant="destructive" onClick={() => approveMutation.mutate({ id: inv.id, action: 'REJECT' })}>Reject</Button>
+                        </div>
                       )}
                     </TableCell>
                   )}

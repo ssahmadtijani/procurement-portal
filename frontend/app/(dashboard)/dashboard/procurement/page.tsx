@@ -44,7 +44,7 @@ export default function ProcurementDashboard() {
                 id: string;
                 totalAmount: number;
                 rfq: { id: string; title: string };
-                supplier: { user: { firstName: string; lastName: string } };
+                supplier: { companyName: string; organization: { name: string } };
                 createdAt: string;
               }) => (
                 <Link
@@ -55,7 +55,7 @@ export default function ProcurementDashboard() {
                   <div>
                     <p className="font-medium text-sm">{bid.rfq.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {bid.supplier.user.firstName} {bid.supplier.user.lastName} · {formatDate(bid.createdAt)}
+                      {bid.supplier.companyName ?? bid.supplier.organization?.name} · {formatDate(bid.createdAt)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

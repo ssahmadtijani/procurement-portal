@@ -21,17 +21,17 @@ export default function BidEvaluationPage() {
   });
 
   const shortlist = useMutation({
-    mutationFn: (bidId: string) => api.patch(`/bids/${bidId}/shortlist`),
+    mutationFn: (bidId: string) => api.post(`/bids/${bidId}/evaluate`, { action: 'SHORTLIST' }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['rfq-evaluation', id] }); toast({ title: 'Bid shortlisted' }); },
   });
 
   const award = useMutation({
-    mutationFn: (bidId: string) => api.patch(`/bids/${bidId}/award`),
+    mutationFn: (bidId: string) => api.post(`/bids/${bidId}/award`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['rfq-evaluation', id] }); toast({ title: 'Bid awarded & PO created!' }); },
   });
 
   const reject = useMutation({
-    mutationFn: ({ bidId, reason }: { bidId: string; reason: string }) => api.patch(`/bids/${bidId}/reject`, { reason }),
+    mutationFn: ({ bidId, reason }: { bidId: string; reason: string }) => api.post(`/bids/${bidId}/evaluate`, { action: 'REJECT', evaluationNotes: reason }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['rfq-evaluation', id] }); toast({ title: 'Bid rejected' }); },
   });
 

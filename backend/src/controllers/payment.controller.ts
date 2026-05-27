@@ -23,7 +23,7 @@ export const recordPayment = async (req: AuthRequest, res: Response): Promise<vo
     data: {
       invoiceId,
       amount,
-      currency: currency ?? 'USD',
+      currency: currency ?? 'NGN',
       paymentDate: new Date(paymentDate),
       paymentMethod,
       referenceNumber,

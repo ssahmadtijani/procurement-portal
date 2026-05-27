@@ -21,13 +21,15 @@ export default function FinanceInvoicesPage() {
   });
 
   const approve = useMutation({
-    mutationFn: (id: string) => api.patch(`/invoices/${id}/approve`),
+    mutationFn: (id: string) => api.post(`/invoices/${id}/approve`, { action: 'APPROVE' }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['finance-invoices'] }); toast({ title: 'Invoice approved' }); },
+    onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
   });
 
   const reject = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) => api.patch(`/invoices/${id}/reject`, { rejectionNote: reason }),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => api.post(`/invoices/${id}/approve`, { action: 'REJECT', rejectionNote: reason }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['finance-invoices'] }); toast({ title: 'Invoice rejected' }); },
+    onError: (e: unknown) => toast({ title: 'Error', description: (e as { response?: { data?: { message?: string } } })?.response?.data?.message, variant: 'destructive' }),
   });
 
   return (

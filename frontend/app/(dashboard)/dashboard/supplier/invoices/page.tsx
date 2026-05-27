@@ -16,7 +16,6 @@ import { z } from 'zod';
 
 const invoiceSchema = z.object({
   poId: z.string().min(1),
-  invoiceNumber: z.string().min(1),
   amount: z.coerce.number().min(0.01),
   dueDate: z.string().optional(),
   notes: z.string().optional(),
@@ -30,12 +29,12 @@ export default function SupplierInvoicesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['supplier-invoices'],
-    queryFn: () => api.get('/invoices/my').then((r) => r.data.data),
+    queryFn: () => api.get('/invoices').then((r) => r.data.data),
   });
 
   const { data: posData } = useQuery({
     queryKey: ['supplier-pos-for-invoice'],
-    queryFn: () => api.get('/purchase-orders/my', { params: { status: 'ACKNOWLEDGED' } }).then((r) => r.data.data),
+    queryFn: () => api.get('/purchase-orders').then((r) => r.data.data),
     enabled: showForm,
   });
 
@@ -74,17 +73,11 @@ export default function SupplierInvoicesPage() {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Select PO…</option>
-                {posData?.purchaseOrders?.map((po: { id: string; poNumber: string; totalAmount: number }) => (
+                {posData?.purchaseOrders?.filter((po: { status: string }) => ['ACKNOWLEDGED', 'COMPLETED'].includes(po.status)).map((po: { id: string; poNumber: string; totalAmount: number }) => (
                   <option key={po.id} value={po.id}>{po.poNumber} — {formatCurrency(po.totalAmount)}</option>
                 ))}
               </select>
               {errors.poId && <p className="text-destructive text-xs">{errors.poId.message}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <Label>Invoice Number</Label>
-              <Input {...register('invoiceNumber')} placeholder="INV-2024-001" />
-              {errors.invoiceNumber && <p className="text-destructive text-xs">{errors.invoiceNumber.message}</p>}
             </div>
 
             <div className="space-y-1">

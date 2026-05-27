@@ -8,10 +8,10 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', authorize('FINANCE', 'ADMIN'), listPayments);
+router.get('/', authorize('FINANCE', 'ORG_ADMIN', 'PLATFORM_ADMIN'), listPayments);
 router.post(
   '/',
-  authorize('FINANCE'),
+  authorize('FINANCE', 'ORG_ADMIN'),
   [
     body('invoiceId').isUUID(),
     body('amount').isFloat({ gt: 0 }),

@@ -79,12 +79,12 @@ export default function AdminSuppliersPage() {
                 categories: string[];
                 status: string;
                 createdAt: string;
-                user: { email: string; firstName: string; lastName: string };
+                organization: { name: string; contactEmail: string };
               }) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.companyName}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{s.regNumber}</TableCell>
-                  <TableCell className="text-sm">{s.user.firstName} {s.user.lastName}<br /><span className="text-muted-foreground text-xs">{s.user.email}</span></TableCell>
+                  <TableCell className="text-sm">{s.organization?.name}<br /><span className="text-muted-foreground text-xs">{s.organization?.contactEmail}</span></TableCell>
                   <TableCell className="text-sm">{s.categories.join(', ')}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{formatDate(s.createdAt)}</TableCell>
                   <TableCell><StatusBadge status={s.status} /></TableCell>

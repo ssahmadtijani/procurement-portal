@@ -85,7 +85,7 @@ export default function SupplierRFQDetailPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 text-sm">
-        <div><span className="text-muted-foreground">Bid Deadline:</span> {formatDate(rfq.bidDeadline)}</div>
+        <div><span className="text-muted-foreground">Bid Deadline:</span> {formatDate(rfq.deadline)}</div>
         {rfq.deliveryAddress && <div><span className="text-muted-foreground">Delivery:</span> {rfq.deliveryAddress}</div>}
       </div>
 
@@ -121,7 +121,7 @@ export default function SupplierRFQDetailPage() {
               </div>
 
               <div className="text-right font-semibold">
-                Total: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalAmount)}
+                Total: {new Intl.NumberFormat('en-NG', { style: 'currency', currency: rfq.currency ?? 'NGN' }).format(totalAmount)}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -152,7 +152,7 @@ export default function SupplierRFQDetailPage() {
           <CardHeader><CardTitle>Your Bid</CardTitle></CardHeader>
           <CardContent>
             <div className="flex items-center justify-between mb-3">
-              <span className="font-semibold">Total: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.myBid.totalAmount)}</span>
+              <span className="font-semibold">Total: {new Intl.NumberFormat('en-NG', { style: 'currency', currency: data.myBid.currency ?? 'NGN' }).format(data.myBid.totalAmount)}</span>
               <StatusBadge status={data.myBid.status} />
             </div>
             <p className="text-sm text-muted-foreground">Bid already submitted for this RFQ.</p>

@@ -53,7 +53,7 @@ export default function AdminReportsPage() {
             <BarChart2 className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{data?.totalSpend != null ? formatCurrency(data.totalSpend) : '—'}</p>
+            <p className="text-2xl font-bold">{data?.totalPaymentsAmount != null ? formatCurrency(data.totalPaymentsAmount) : '—'}</p>
           </CardContent>
         </Card>
       </div>

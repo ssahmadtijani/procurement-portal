@@ -1,10 +1,14 @@
 import { Response } from 'express';
 import { validationResult } from 'express-validator';
+import { v4 as uuidv4 } from 'uuid';
 import prisma from '../config/db';
 import { sendSuccess, sendError } from '../utils/response.utils';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { notificationService } from '../services/notification.service';
 import { emailService } from '../services/email.service';
+
+const generateRFQNumber = () =>
+  `RFQ-${Date.now()}-${uuidv4().slice(0, 6).toUpperCase()}`;
 
 export const createRFQ = async (req: AuthRequest, res: Response): Promise<void> => {
   const errors = validationResult(req);
@@ -24,12 +28,13 @@ export const createRFQ = async (req: AuthRequest, res: Response): Promise<void> 
 
   const rfq = await prisma.rFQ.create({
     data: {
+      rfqNumber: generateRFQNumber(),
       title,
       description,
       category,
       deadline: new Date(deadline),
       budget: budget ? parseFloat(budget) : undefined,
-      currency: currency ?? 'USD',
+      currency: currency ?? 'NGN',
       visibility: visibility ?? 'PUBLIC',
       organizationId: orgId,
       createdById: req.user!.userId,

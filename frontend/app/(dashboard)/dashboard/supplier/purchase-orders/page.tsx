@@ -14,11 +14,11 @@ export default function SupplierPOsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['supplier-pos'],
-    queryFn: () => api.get('/purchase-orders/my').then((r) => r.data.data),
+    queryFn: () => api.get('/purchase-orders').then((r) => r.data.data),
   });
 
   const acknowledge = useMutation({
-    mutationFn: (id: string) => api.patch(`/purchase-orders/${id}/acknowledge`),
+    mutationFn: (id: string) => api.post(`/purchase-orders/${id}/acknowledge`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplier-pos'] }); toast({ title: 'PO acknowledged' }); },
   });
 
@@ -44,7 +44,7 @@ export default function SupplierPOsPage() {
                 id: string;
                 poNumber: string;
                 totalAmount: number;
-                requiredDeliveryDate?: string;
+                deliveryDate?: string;
                 status: string;
                 rfq: { title: string };
               }) => (
@@ -52,7 +52,7 @@ export default function SupplierPOsPage() {
                   <TableCell className="font-medium">{po.poNumber}</TableCell>
                   <TableCell>{po.rfq.title}</TableCell>
                   <TableCell className="font-medium">{formatCurrency(po.totalAmount)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{po.requiredDeliveryDate ? formatDate(po.requiredDeliveryDate) : '–'}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{po.deliveryDate ? formatDate(po.deliveryDate) : '–'}</TableCell>
                   <TableCell><StatusBadge status={po.status} /></TableCell>
                   <TableCell>
                     {po.status === 'SENT' && (

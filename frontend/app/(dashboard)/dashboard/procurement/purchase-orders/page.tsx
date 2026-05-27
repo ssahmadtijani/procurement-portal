@@ -19,7 +19,7 @@ export default function ProcurementPOsPage() {
   });
 
   const send = useMutation({
-    mutationFn: (id: string) => api.patch(`/purchase-orders/${id}/send`),
+    mutationFn: (id: string) => api.post(`/purchase-orders/${id}/send`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['procurement-pos'] }); toast({ title: 'PO sent to supplier' }); },
   });
 

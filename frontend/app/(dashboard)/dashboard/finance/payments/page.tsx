@@ -18,7 +18,8 @@ const paymentSchema = z.object({
   invoiceId: z.string().min(1),
   amount: z.coerce.number().min(0.01),
   paymentMethod: z.string().min(1),
-  reference: z.string().optional(),
+  paymentDate: z.string().min(1),
+  referenceNumber: z.string().optional(),
 });
 type PaymentForm = z.infer<typeof paymentSchema>;
 
@@ -104,7 +105,13 @@ export default function FinancePaymentsPage() {
 
             <div className="space-y-1">
               <Label>Reference Number</Label>
-              <Input {...register('reference')} placeholder="TXN-12345" />
+              <Input {...register('referenceNumber')} placeholder="TXN-12345" />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Payment Date</Label>
+              <Input type="date" {...register('paymentDate')} defaultValue={new Date().toISOString().slice(0, 10)} />
+              {errors.paymentDate && <p className="text-destructive text-xs">{errors.paymentDate.message}</p>}
             </div>
 
             <div className="col-span-2">
@@ -135,9 +142,9 @@ export default function FinancePaymentsPage() {
                 id: string;
                 amount: number;
                 paymentMethod: string;
-                reference?: string;
+                referenceNumber?: string;
                 status: string;
-                paidAt?: string;
+                paymentDate?: string;
                 createdAt: string;
                 invoice: { invoiceNumber: string; supplier: { companyName: string } };
               }) => (
@@ -146,8 +153,8 @@ export default function FinancePaymentsPage() {
                   <TableCell>{p.invoice.supplier.companyName}</TableCell>
                   <TableCell className="font-medium">{formatCurrency(p.amount)}</TableCell>
                   <TableCell className="text-sm">{p.paymentMethod.replace('_', ' ')}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{p.reference || '–'}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatDate(p.paidAt ?? p.createdAt)}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{p.referenceNumber || '–'}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{formatDate(p.paymentDate ?? p.createdAt)}</TableCell>
                   <TableCell><StatusBadge status={p.status} /></TableCell>
                 </TableRow>
               ))}
