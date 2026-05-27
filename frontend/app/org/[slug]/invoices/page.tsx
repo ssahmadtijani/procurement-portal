@@ -16,7 +16,7 @@ export default function InvoicesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const isFinance = user?.role === 'FINANCE';
+  const isFinance = user?.role === 'FINANCE' || (user?.role === 'ORG_ADMIN' && user?.organization?.type === 'BUYER');
   const isSupplier = user?.organization?.type === 'SUPPLIER_COMPANY';
 
   const [showForm, setShowForm] = useState(false);
