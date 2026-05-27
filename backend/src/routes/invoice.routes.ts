@@ -17,7 +17,7 @@ router.get('/', listInvoices);
 router.get('/:id', getInvoiceById);
 router.post(
   '/',
-  authorize('SUPPLIER'),
+  authorize('SUPPLIER', 'ORG_ADMIN'),
   [
     body('poId').isUUID(),
     body('amount').isFloat({ gt: 0 }),
@@ -26,7 +26,7 @@ router.post(
 );
 router.post(
   '/:id/approve',
-  authorize('FINANCE'),
+  authorize('FINANCE', 'ORG_ADMIN'),
   [body('action').isIn(['APPROVE', 'REJECT'])],
   approveInvoice
 );
