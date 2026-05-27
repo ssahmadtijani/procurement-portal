@@ -18,6 +18,9 @@ export const recordPayment = async (req: AuthRequest, res: Response): Promise<vo
   if (invoice.status !== 'APPROVED') {
     sendError(res, 'Invoice must be approved before recording payment', 400); return;
   }
+  if (req.user!.role !== 'PLATFORM_ADMIN' && invoice.buyerOrgId !== req.user!.organizationId) {
+    sendError(res, 'Forbidden', 403); return;
+  }
 
   const payment = await prisma.payment.create({
     data: {
@@ -41,9 +44,20 @@ export const recordPayment = async (req: AuthRequest, res: Response): Promise<vo
 export const listPayments = async (req: AuthRequest, res: Response): Promise<void> => {
   const { page = '1', limit = '20' } = req.query as Record<string, string>;
   const skip = (parseInt(page) - 1) * parseInt(limit);
+  const { role, organizationId, orgType } = req.user!;
+
+  const where: Record<string, unknown> = {};
+  if (role !== 'PLATFORM_ADMIN') {
+    if (orgType === 'SUPPLIER_COMPANY') {
+      where.invoice = { supplier: { organizationId } };
+    } else {
+      where.invoice = { buyerOrgId: organizationId };
+    }
+  }
 
   const [payments, total] = await Promise.all([
     prisma.payment.findMany({
+      where,
       include: {
         invoice: {
           include: {
@@ -56,7 +70,7 @@ export const listPayments = async (req: AuthRequest, res: Response): Promise<voi
       take: parseInt(limit),
       orderBy: { paymentDate: 'desc' },
     }),
-    prisma.payment.count(),
+    prisma.payment.count({ where }),
   ]);
 
   sendSuccess(res, { payments, total, page: parseInt(page), limit: parseInt(limit) });
