@@ -65,11 +65,21 @@ export default function SupplierProfilePage() {
     <div className="max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Supplier Profile</h1>
-        {profile && <StatusBadge status={profile.verificationStatus ?? 'PENDING'} />}
+        {profile && <StatusBadge status={profile.status ?? 'PENDING'} />}
       </div>
       {!profile && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
           Complete your supplier profile to appear in the marketplace and receive RFQ invitations.
+        </div>
+      )}
+      {profile?.status === 'REJECTED' && profile.rejectionNote && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+          Rejection reason: {profile.rejectionNote}
+        </div>
+      )}
+      {profile?.status === 'PENDING' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+          Your profile is under review by the platform admin.
         </div>
       )}
       <form onSubmit={handleSubmit((d) => saveMutation.mutate(d))} className="space-y-4">
