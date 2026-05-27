@@ -45,7 +45,7 @@ export const createInvoice = async (req: AuthRequest, res: Response): Promise<vo
       supplierId: supplierProfile.id,
       buyerOrgId: po.buyerOrgId!,
       amount,
-      currency: currency ?? 'USD',
+      currency: currency ?? 'NGN',
       dueDate: dueDate ? new Date(dueDate) : undefined,
       notes,
     },
