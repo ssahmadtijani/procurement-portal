@@ -158,6 +158,19 @@ export default function LoginPage() {
               Create one free
             </Link>
           </p>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+            <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">or</span></div>
+          </div>
+
+          <Link
+            href="/marketplace"
+            className="flex items-center justify-center gap-2 w-full rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+          >
+            <ShoppingBag className="w-4 h-4 text-cyan-500" />
+            Browse Public Marketplace
+          </Link>
         </div>
       </div>
     </div>
