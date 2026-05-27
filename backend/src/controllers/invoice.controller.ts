@@ -83,7 +83,8 @@ export const listInvoices = async (req: AuthRequest, res: Response): Promise<voi
     // sees everything
   } else if (role === 'SUPPLIER' || (role === 'ORG_ADMIN' && req.user!.orgType === 'SUPPLIER_COMPANY')) {
     const sp = await prisma.supplierProfile.findUnique({ where: { organizationId: organizationId! } });
-    if (sp) where.supplierId = sp.id;
+    if (!sp) { sendSuccess(res, { invoices: [], total: 0, page: parseInt(page), limit: parseInt(limit) }); return; }
+    where.supplierId = sp.id;
   } else {
     // FINANCE, CORPORATE_OFFICE, PROCUREMENT_OFFICER, ORG_ADMIN (buyer)
     where.buyerOrgId = organizationId;

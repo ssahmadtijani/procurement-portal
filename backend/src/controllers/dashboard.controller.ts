@@ -55,6 +55,10 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
     case 'ORG_ADMIN': {
       if (req.user!.orgType === 'SUPPLIER_COMPANY') {
         const sp = await prisma.supplierProfile.findUnique({ where: { organizationId: organizationId! } });
+        if (!sp) {
+          sendSuccess(res, { totalBids: 0, awardedBids: 0, activePOs: 0, pendingInvoices: 0, totalEarnings: 0, averageRating: 0, totalRatings: 0 });
+          break;
+        }
         const [totalBids, awardedBids, activePOs, pendingInvoices, totalEarnings] = await Promise.all([
           prisma.bid.count({ where: { supplierId: sp?.id } }),
           prisma.bid.count({ where: { supplierId: sp?.id, status: 'AWARDED' } }),
@@ -100,6 +104,10 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
 
     case 'SUPPLIER': {
       const sp = await prisma.supplierProfile.findUnique({ where: { organizationId: organizationId! } });
+      if (!sp) {
+        sendSuccess(res, { totalBids: 0, awardedBids: 0, activePOs: 0, pendingInvoices: 0, totalEarnings: 0, averageRating: 0, totalRatings: 0 });
+        break;
+      }
       const [totalBids, awardedBids, activePOs, pendingInvoices, totalEarnings] = await Promise.all([
         prisma.bid.count({ where: { supplierId: sp?.id } }),
         prisma.bid.count({ where: { supplierId: sp?.id, status: 'AWARDED' } }),
